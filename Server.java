@@ -12,15 +12,16 @@ public class Server {
 		System.out.println("The server is running."); 
         	ServerSocket listener = new ServerSocket(sPort);
 		int clientNum = 1;
-        	try {
-            		while(true) {
-                		new Handler(listener.accept(),clientNum).start();
+		
+		try {
+			while(true) {
+				new Handler(listener.accept(),clientNum).start();
 				System.out.println("Client "  + clientNum + " is connected!");
 				clientNum++;
-            			}
-        	} finally {
-            		listener.close();
-        	} 
+			}
+		} finally {
+				listener.close();
+		} 
  
     	}
 
