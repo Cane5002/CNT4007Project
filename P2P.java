@@ -68,7 +68,7 @@ public class P2P
                 int portNumber = Integer.parseInt(values[2]);
                 boolean hasFile = Boolean.parseBoolean(values[3]);
 
-                peers.add(Peer(peerID, hostName, portNumber, hasFile));
+                peers.add(new Peer(peerID, hostName, portNumber, hasFile));
             }
 
             peerInfoInput.close();
