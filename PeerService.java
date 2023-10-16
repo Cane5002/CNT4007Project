@@ -2,6 +2,7 @@ import java.net.*;
 import java.io.*;
 
 //This is the server.java file with some changes
+//Some code from Server.java & Client.java from Canvas
 public class PeerService extends Thread {
 
 	private static int thisPort = 8000;   //The server will be listening on this port number
@@ -51,6 +52,7 @@ public class PeerService extends Thread {
     }
 
     //for when THIS is acting as a client
+    //Code based off of Client.java from Canvas
     private static class SelfClient extends Thread {
 
         private ObjectInputStream in;	//stream read from the socket
@@ -125,6 +127,8 @@ public class PeerService extends Thread {
 	
     //for handling other people being clients
     //for when THIS is a server
+
+    //Code from Server.java from Canvas
 	private static class Handler extends Thread {
 		private String message;    //message received from the client
 		private Socket connection;
