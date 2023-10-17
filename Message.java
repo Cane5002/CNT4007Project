@@ -76,12 +76,12 @@ class Message
             returnArr[i] = lengthInBytes[i];
         }
 
-        returnArr[5] = type;
+        returnArr[4] = type;
 
         //copy over the whole payload
         for(int i = 0; i < payload.length; i++)
         {
-            returnArr[i+6] = payload[i];
+            returnArr[i+5] = payload[i];
         }
 
         return returnArr;
