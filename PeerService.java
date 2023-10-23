@@ -27,6 +27,10 @@ public class PeerService extends Thread {
 	static ObjectOutputStream out;         //stream write to the socket
  	static ObjectInputStream in;          //stream read from the socket
 
+    // TODO: storage for each peer's bitfield
+    private static byte bitfield[];
+    //private static Map<Integer, byte[]> bitfields = new HashMap<>();
+
 	public static void main(String[] args) throws Exception {
 
         BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(System.in));
@@ -420,22 +424,90 @@ public class PeerService extends Thread {
         }
     }
 
-    //on receiving a message
+    // decodes received messages
     public static void decode(Message message, Neighbor from)
     {
-        switch(message.getType())
+        byte type = message.getType();
+
+        // choke, no payload
+        if(type == 0)
         {
-            case 0:
-                receiveChoke(from);
-                break;
-            case 1:
-                receiveUnchoke(from);
-                break;
-            case 7:
-                getPiece(from);
-                break;
-            default:
-                System.out.println("Type unrecognized");
+            receiveChoke(from);
+        }
+
+        // unchoke, no payload
+        else if(type == 1)
+        {
+            receiveUnchoke(from);
+        }
+
+        // interested, no payload
+        else if(type == 2)
+        {
+
+        }
+
+        // not interested, no payload
+        else if(type == 3)
+        {
+
+        }
+        
+        // have, 4 byte piece index field
+        else if(type == 4)
+        {
+            byte pieceIndex[] = message.getPayload();
+        }
+
+        // bitfield, first byte = 0-7 from high bit to low
+        else if(type == 5)
+        {
+            byte recievedBitfield[] = message.getPayload();
+
+            // check if this peer has the pieces the sender has
+            boolean isInterested = false;
+            for(int i = 0; i < bitfield.length; i++)
+            {
+                if(bitfield[i] != recievedBitfield[i])
+                {
+                    isInterested = true;
+                    break;
+                }
+            }
+
+            // if sender has something this peer does not, we send an interested message
+            if(isInterested)
+            {
+                // send interested
+                byte[] empty = {};
+                Message outMessage = new Message(1, (byte)2, empty);
+                PeerService.sendMessage(outMessage, from);
+            }
+
+            else if(!isInterested)
+            {
+                // send not interested
+                byte[] empty = {};
+                Message outMessage = new Message(1, (byte)3, empty);
+                PeerService.sendMessage(outMessage, from);
+            }
+        }
+
+        // request, 4 byte piece index field
+        else if(type == 6)
+        {
+            byte pieceIndex[] = message.getPayload();
+        }
+
+        // piece, 4 byte piece index field + piece content
+        else if(type == 7)
+        {
+            getPiece(from);
+        }
+
+        else
+        {
+            System.out.println("Type unrecognized");
         }
     }
 }
