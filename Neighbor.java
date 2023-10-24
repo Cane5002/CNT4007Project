@@ -12,8 +12,12 @@ public class Neighbor
     public boolean interested;
     public boolean preferred;
     public Socket connection;
+    public Peer peer;
     public ObjectOutputStream out;
 
+    //TODO: possibly make default constructor?
+
+    //TODO: possibly deprecated
     public Neighbor(int port)
     {
         chunksSent = 0;
@@ -21,8 +25,20 @@ public class Neighbor
         preferred = false;
         rate = -1;
         this.port = port;
+        peer = null;
     }
 
+    public Neighbor(Peer peer)
+    {
+        chunksSent = 0;
+        interested = false;
+        preferred = false;
+        rate = -1;
+        this.peer = peer;
+        port = peer.portNumber;
+    }
+
+    //TODO: update for Peer
     public Neighbor(float rate, int port)
     {
         chunksSent = 0;
@@ -38,6 +54,21 @@ public class Neighbor
         return port;
     }
 
+    public boolean getHasFile()
+    {
+        return peer.hasFile;
+    }
+
+    public String getHostName()
+    {
+        return peer.hostName;
+    }
+
+    public int getID()
+    {
+        return peer.peerID;
+    }
+
     public float getRate()
     {
         return rate;
@@ -45,7 +76,7 @@ public class Neighbor
 
     public void setRate(long endTime)
     {
-        this.rate = chunksSent/(endTime-startTime);
+        this.rate = chunksSent/(endTime/1000-startTime/1000);
         chunksSent = 0;
     }
 
