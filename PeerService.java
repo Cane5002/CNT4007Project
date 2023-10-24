@@ -7,19 +7,19 @@ import java.util.concurrent.ThreadLocalRandom;
 //Some code from Server.java & Client.java from Canvas
 public class PeerService extends Thread {
 
-    private static final int NUM_NEIGHBORS = 2;
-    
-    //TEMP VARIABLES (delete once P2P is connected):    
+    private static P2P p2pConfig = new P2P();
+    private static final int NUM_NEIGHBORS = 2;//p2pConfig.peers.size();
     private static ArrayList<Neighbor> neighbors = new ArrayList<Neighbor>();
     private static ArrayList<Neighbor> chokedNeighbors = new ArrayList<Neighbor>();
 
+    //TEMP VARIABLES (delete once P2P is connected):    
     private static int numPreferredNeighbors = 1;
     private static int unchokingInterval = 10;
     private static int optUnchokingInterval = 30;
     private static boolean hasFile;
+    //END TEMP VARIABLES
 
     private static Neighbor[] preferredNeighbors = new Neighbor[numPreferredNeighbors];
-    //END TEMP VARIABLES
 
 	private static int thisPort = 8000;   //The server will be listening on this port number
     private static int otherPort = 7000;
@@ -30,6 +30,7 @@ public class PeerService extends Thread {
     // TODO: storage for each peer's bitfield
     private static byte bitfield[];
     //private static Map<Integer, byte[]> bitfields = new HashMap<>();
+
 
 	public static void main(String[] args) throws Exception {
 
@@ -44,19 +45,17 @@ public class PeerService extends Thread {
         else
             hasFile = false;
 
-        //TODO: temp, delete after P2P read in
-        /* 
-        int count = 0;
+        
+        //set the neighbors
         for(int i = 1; i <= NUM_NEIGHBORS+1; i++)
         {
             if(i != thisPort)
             {
-                neighbors.add(new Neighbor(i));
-                chokedNeighbors.add(neighbors.get(count));
-                count++;
+                //TODO: uncomment for when P2P is implemented
+                //neighbors.add(new Neighbor(p2pConfig.peers.get(i)));
             }
                 
-        }*/
+        }
         
         System.out.println("what is the other port?");
         otherPort = Integer.parseInt(bufferedReader.readLine());
