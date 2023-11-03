@@ -8,13 +8,14 @@ import java.util.concurrent.ThreadLocalRandom;
 public class PeerService extends Thread {
 
     private static P2P p2pConfig = new P2P();
-    private static final int NUM_NEIGHBORS = 2;//p2pConfig.peers.size();
+    private static final int NUM_NEIGHBORS = p2pConfig.peers.size();
     private static ArrayList<Neighbor> neighbors = new ArrayList<Neighbor>();
     private static ArrayList<Neighbor> chokedNeighbors = new ArrayList<Neighbor>();
+    private static int thisID = -1;
 
     //TEMP VARIABLES (delete once P2P is connected):    
-    private static int numPreferredNeighbors = 1;
-    private static int unchokingInterval = 10;
+    private static int numPreferredNeighbors = p2pConfig.numPreferredNeighbors;//1;
+    private static int unchokingInterval = p2pConfig.unchokingInterval;//10;
     private static int optUnchokingInterval = 30;
     private static boolean hasFile;
     //END TEMP VARIABLES
@@ -22,7 +23,6 @@ public class PeerService extends Thread {
     private static Neighbor[] preferredNeighbors = new Neighbor[numPreferredNeighbors];
 
 	private static int thisPort = 8000;   //The server will be listening on this port number
-    private static int otherPort = 7000;
     static Socket requestSocket;           //socket connect to the server
 	static ObjectOutputStream out;         //stream write to the socket
  	static ObjectInputStream in;          //stream read from the socket
@@ -36,29 +36,12 @@ public class PeerService extends Thread {
 
         BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(System.in));
 
-        System.out.println("Please enter your port: ");
-        thisPort = Integer.parseInt(bufferedReader.readLine());
-
-        //TODO: temporary, delete this after P2P read in
-        if(thisPort == 1)
-            hasFile = true;
-        else
-            hasFile = false;
-
+        
+        System.out.println("Please enter your peerID: ");
+        thisID = Integer.parseInt(bufferedReader.readLine());
         
         //set the neighbors
-        for(int i = 1; i <= NUM_NEIGHBORS+1; i++)
-        {
-            if(i != thisPort)
-            {
-                //TODO: uncomment for when P2P is implemented
-                //neighbors.add(new Neighbor(p2pConfig.peers.get(i)));
-            }
-                
-        }
-        
-        System.out.println("what is the other port?");
-        otherPort = Integer.parseInt(bufferedReader.readLine());
+        setUpNeighbors();
 
         String result = "n";
         while(!result.equals("y"))
@@ -68,12 +51,15 @@ public class PeerService extends Thread {
         }
 
         //set up server ( myself )
-		System.out.println("Peer at port " + thisPort + " is running."); 
+		System.out.println("Peer with ID " + thisID + " at port " + thisPort + " is running."); 
         ServerSocket listener = new ServerSocket(thisPort);
 
 
         //start ourselves as a client in another thread
-        new SelfClient().start();
+        for(Neighbor n : neighbors)
+        {
+            new SelfClient(n).start();
+        }
 
         //handling other peers connecting to me
         try {
@@ -116,24 +102,35 @@ public class PeerService extends Thread {
 
         private ObjectInputStream in;	//stream read from the socket
 		private ObjectOutputStream out;    //stream write to the socket
+        private Neighbor server;
+        private int serverPort;
+
+        SelfClient(Neighbor peerToContact)
+        {
+            server = peerToContact;
+            serverPort = peerToContact.getPort();
+        }
 
         public void run()
         {
+            //TODO: think about retrying the socket until server accepts connection
             //attempt to connect to the other peer
             try
             {
                 //sleep for 5 seconds so i have time to start up the other peer 
                     // TODO: see if we can remove the sleep later
                 Thread.sleep(5000);
-                Socket requestSocket = new Socket("localhost", otherPort);
-                System.out.println("Connected to localhost in port " + otherPort);
+                Socket requestSocket = new Socket("localhost", serverPort);
+                System.out.println("Connected to localhost in port " + serverPort);
 
                 out = new ObjectOutputStream(requestSocket.getOutputStream());
                 out.flush();
                 in = new ObjectInputStream(requestSocket.getInputStream());
 
-                //the actual meat of the client-side (sending requests)
-                BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(System.in));
+                //send handshake to server
+                sendHandshake(thisID, out);
+
+                //the actual meat of the client-side
                 while(true)
                 {
 
@@ -142,25 +139,18 @@ public class PeerService extends Thread {
                     {
                         byte[] message = (byte[])in.readObject();
                         Message result = new Message(message);
-                        decode(result, neighbors.get(0));
-                        //System.out.println(result);
+                        decode(result, server);
+
                     }
                     catch(ClassNotFoundException e)
                     {
                         e.printStackTrace();
                     }
 
-                    /* 
-                    System.out.println("Would you like to send a message (y/n)?");
-                    if(bufferedReader.readLine().toLowerCase().equals("y"))
-                    {
-                        sendMessage();
-                    }
-                  */
                 }
 
             }
-            //TODO: figure out this required error handling stuff
+
             catch(InterruptedException e)
             {
                 e.printStackTrace();
@@ -183,20 +173,6 @@ public class PeerService extends Thread {
             }
         }
 
-        //send a message to the output stream
-        public void sendMessage()
-        {
-            try{
-                byte[] emptyArr = {};
-                Message newMessage = new Message(2, (byte)0, emptyArr);
-                out.writeObject(newMessage.toBytes());
-                out.flush();
-                System.out.println("wrote a message");
-            }
-            catch(IOException ioException){
-                ioException.printStackTrace();
-            }
-        }
     }
 	
 
@@ -210,17 +186,14 @@ public class PeerService extends Thread {
 		private ObjectOutputStream out;    //stream write to the socket
 		private int clientIndex;		//The index number of the client
         private Neighbor thisNeighbor;
+        private boolean receivedHandshake;
 
 		public Handler(Socket connection, int clientIndex) {
             this.connection = connection;
 			this.clientIndex = clientIndex;
             System.out.println("Client connected with address " + connection.getRemoteSocketAddress());
-
-            thisNeighbor = new Neighbor(connection.getPort());
-            thisNeighbor.connection = connection;
-
-            neighbors.add(thisNeighbor);
-            chokedNeighbors.add(thisNeighbor);
+           
+            receivedHandshake = false;
 		}
 
         //receives messages from fellow peers
@@ -231,16 +204,30 @@ public class PeerService extends Thread {
                 out = new ObjectOutputStream(connection.getOutputStream());
                 out.flush();
                 in = new ObjectInputStream(connection.getInputStream());
-                thisNeighbor.out = out;
 
                 try{
                     while(true)
                     {
-                        //receive the message sent from the client
-                        byte[] message = (byte[])in.readObject();
-                        Message result = new Message(message);
-                        decode(result, thisNeighbor);
-                        System.out.println(result);
+                        if(receivedHandshake)
+                        {
+                            //receive the message sent from the client
+                            byte[] message = (byte[])in.readObject();
+                            Message result = new Message(message);
+                            decode(result, thisNeighbor);
+                        }
+                        //set up the neighbor that is connected to the server in this thread using the handshake
+                        else
+                        {
+                            String message = (String)in.readObject();
+                            int connectedID = new Handshake(message).peerID;
+                            thisNeighbor = determineNeighborFromID(connectedID);
+                            thisNeighbor.out = out;
+                            thisNeighbor.connection = connection;
+
+                            //should only run once per neighbor
+                            receivedHandshake = true;
+
+                        }
                     }
                 }
                 catch(ClassNotFoundException classnot){
@@ -365,14 +352,17 @@ public class PeerService extends Thread {
         //unchoke all the preferred neighbors
         for(int i = 0; i < neighbors.size(); i++)
         {
-            if(neighbors.get(i).connection == null)
+            Neighbor currentNeighbor = neighbors.get(i);
+
+            if(currentNeighbor.connection == null)
                 continue;
 
-            //TODO: don't unchoke if already unchoked, don't choke if already choked
-            if(neighbors.get(i).preferred)
-                sendUnchoke(neighbors.get(i));
-            else
-                sendChoke(neighbors.get(i));
+            boolean isChoked = chokedNeighbors.contains(currentNeighbor);
+
+            if(currentNeighbor.preferred && isChoked)
+                sendUnchoke(currentNeighbor);
+            else if(!isChoked)
+                sendChoke(currentNeighbor);
         }
 
         //if the number of interested neighbors < numPreferredNeighbors, optimistically unchoke the missing # of neighbors
@@ -386,20 +376,25 @@ public class PeerService extends Thread {
 
     public static void optimisticallyUnchoke()
     {
-        int randomNum = ThreadLocalRandom.current().nextInt(0, chokedNeighbors.size());
-       
-        if(chokedNeighbors.get(randomNum).connection != null)
-            sendUnchoke(chokedNeighbors.get(randomNum));
+        //bounds checking
+        if(chokedNeighbors.size() >= 1)
+        {
+            //get a random choked neighbor and unchoke them
+            int randomNum = ThreadLocalRandom.current().nextInt(0, chokedNeighbors.size());
+        
+            if(chokedNeighbors.get(randomNum).connection != null)
+                sendUnchoke(chokedNeighbors.get(randomNum));
+
+        }
 
     }
 
     //TODO: make more efficient
-    public static Neighbor determineNeighborFromPort(int port)
+    public static Neighbor determineNeighborFromID(int peerID)
     {
         for(int i = 0; i < neighbors.size(); i++)
         {
-            System.out.println("Looking for port " + port + " on neighbor's " + neighbors.get(i).getPort());
-            if(port == neighbors.get(i).getPort())
+            if(peerID == neighbors.get(i).getID())
                 return neighbors.get(i);
         }
 
@@ -415,6 +410,23 @@ public class PeerService extends Thread {
             {
                 to.out.writeObject(message.toBytes());
                 to.out.flush();
+            }
+
+        }
+        catch(IOException ioException){
+            ioException.printStackTrace();
+        }
+    }
+
+    private static void sendHandshake(int fromPeerID, ObjectOutputStream out)
+    {
+        try{
+            
+            if(out != null)
+            {
+                String write ="P2PFILESHARINGPROJ0000000000" + fromPeerID;
+                out.writeObject(write);
+                out.flush();
             }
 
         }
@@ -507,6 +519,22 @@ public class PeerService extends Thread {
         else
         {
             System.out.println("Type unrecognized");
+        }
+    }
+
+    private static void setUpNeighbors()
+    {
+        for(Peer p : p2pConfig.peers)
+        {
+            if(p.peerID == thisID)
+            {
+                thisPort = p.portNumber;
+                continue;
+            }
+
+            Neighbor newNeighbor = new Neighbor(p);
+            neighbors.add(newNeighbor);
+            chokedNeighbors.add(newNeighbor);
         }
     }
 }

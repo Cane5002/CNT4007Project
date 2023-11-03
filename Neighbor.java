@@ -108,6 +108,6 @@ public class Neighbor
 
     public String toString()
     {
-        return "NEIGHBOR \n----------\n Port: " + port + " Interested: " + interested + " Started: " + startTime;
+        return "NEIGHBOR: [PeerID: " + peer.peerID + " | Port: " + port + " | Interested: " + interested + " | Started: " + (startTime/1000) + "]";
     }
 }
