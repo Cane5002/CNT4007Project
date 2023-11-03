@@ -1,11 +1,11 @@
 // handshake message class (expects string input with length 32)
-public class handshake
+public class Handshake
 {
     String header;
     String zeroBits;
     int peerID;
 
-    handshake(String message)
+    Handshake(String message)
     {
         try
         {
@@ -34,6 +34,7 @@ public class handshake
             System.out.println("Exception found in handshake constructor:\n" + e.getMessage());
         }
     }
+
 
     byte[] toByte()
     {
