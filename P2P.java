@@ -22,12 +22,24 @@ public class P2P
         {
             BufferedReader configInput = new BufferedReader(new FileReader("Common.cfg"));
 
-            numPreferredNeighbors = Integer.parseInt(configInput.readLine());
-            unchokingInterval = Integer.parseInt(configInput.readLine());
-            optUnchokingInterval = Integer.parseInt(configInput.readLine());
-            fileName = configInput.readLine();
-            fileSize = Integer.parseInt(configInput.readLine());
-            pieceSize = Integer.parseInt(configInput.readLine());
+
+            String[] values = configInput.readLine().split(" ");
+            numPreferredNeighbors = Integer.parseInt(values[1]);
+
+            values = configInput.readLine().split(" ");
+            unchokingInterval = Integer.parseInt(values[1]);
+
+            values = configInput.readLine().split(" ");
+            optUnchokingInterval = Integer.parseInt(values[1]);
+
+            values = configInput.readLine().split(" ");
+            fileName = values[1];
+
+            values = configInput.readLine().split(" ");
+            fileSize = Integer.parseInt(values[1]);
+
+            values = configInput.readLine().split(" ");
+            pieceSize = Integer.parseInt(values[1]);
 
             configInput.close();
         }
@@ -44,6 +56,8 @@ public class P2P
             BufferedReader peerInfoInput = new BufferedReader(new FileReader("PeerInfo.cfg"));
 
             String curLine = peerInfoInput.readLine();
+            peers = new ArrayList<Peer>();
+
             while(curLine != null)
             {
                 String[] values = curLine.split(" ");
@@ -53,6 +67,8 @@ public class P2P
                 boolean hasFile = Boolean.parseBoolean(values[3]);
 
                 peers.add(new Peer(peerID, hostName, portNumber, hasFile));
+
+                curLine = peerInfoInput.readLine();
             }
 
             peerInfoInput.close();
@@ -61,6 +77,7 @@ public class P2P
         catch(Exception e)
         {
             System.out.println("Exception found in reading peer info config");
+            e.printStackTrace();
         }
     }
 
