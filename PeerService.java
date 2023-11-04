@@ -441,6 +441,17 @@ public class PeerService extends Thread {
         BitSet result = new BitSet();
 
         // translate input here
+        for(int i = 0; i < input.length; i++)
+        {
+            byte curByte = input[i];
+
+            for(int j = 0; j < 8; j++)
+            {
+                int curBit = curByte >> j;
+                if((curBit & 1) == 1)
+                    result.set((i * 8) + j);
+            }
+        }
 
         return result;
     }
@@ -482,7 +493,7 @@ public class PeerService extends Thread {
             // check if we have the same piece, if not -> interested, if yes -> not interested
             int someIndex = (int)pieceIndex[0];
 
-            // if our bitfield at that index is off...
+            // if our bitfield's bit at that index is 0...
             if(!bitfield.get(someIndex))
             {
                 // send interested
@@ -510,10 +521,15 @@ public class PeerService extends Thread {
             boolean isInterested = false;
             for(int i = 0; i < bitfield.length(); i++)
             {
-                if(bitfield.get(i) != recievedBitfield.get(i))
+                // if the sender has that piece...
+                if(recievedBitfield.get(i))
                 {
-                    isInterested = true;
-                    break;
+                    // check if we don't have that piece
+                    if(!bitfield.get(i))
+                    {
+                        isInterested = true;
+                        break;
+                    }
                 }
             }
 
