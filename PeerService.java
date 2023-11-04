@@ -28,7 +28,8 @@ public class PeerService extends Thread {
  	static ObjectInputStream in;          //stream read from the socket
 
     // TODO: storage for each peer's bitfield
-    private static byte bitfield[];
+    //private static byte bitfield[];
+    private static BitSet bitfield = new BitSet();
     //private static Map<Integer, byte[]> bitfields = new HashMap<>();
 
 
@@ -435,6 +436,15 @@ public class PeerService extends Thread {
         }
     }
 
+    public static BitSet byteArrayToBitSet(byte input[])
+    {
+        BitSet result = new BitSet();
+
+        // translate input here
+
+        return result;
+    }
+
     // decodes received messages
     public static void decode(Message message, Neighbor from)
     {
@@ -468,18 +478,39 @@ public class PeerService extends Thread {
         else if(type == 4)
         {
             byte pieceIndex[] = message.getPayload();
+
+            // check if we have the same piece, if not -> interested, if yes -> not interested
+            int someIndex = (int)pieceIndex[0];
+
+            // if our bitfield at that index is off...
+            if(!bitfield.get(someIndex))
+            {
+                // send interested
+                byte[] empty = {};
+                Message outMessage = new Message(1, (byte)2, empty);
+                PeerService.sendMessage(outMessage, from);
+            }
+    
+            else
+            {
+                // send not interested
+                byte[] empty = {};
+                Message outMessage = new Message(1, (byte)3, empty);
+                PeerService.sendMessage(outMessage, from);
+            }
         }
 
         // bitfield, first byte = 0-7 from high bit to low
         else if(type == 5)
         {
-            byte recievedBitfield[] = message.getPayload();
+            byte recieved[] = message.getPayload();
+            BitSet recievedBitfield = byteArrayToBitSet(recieved);
 
             // check if this peer has the pieces the sender has
             boolean isInterested = false;
-            for(int i = 0; i < bitfield.length; i++)
+            for(int i = 0; i < bitfield.length(); i++)
             {
-                if(bitfield[i] != recievedBitfield[i])
+                if(bitfield.get(i) != recievedBitfield.get(i))
                 {
                     isInterested = true;
                     break;
