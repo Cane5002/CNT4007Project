@@ -93,4 +93,11 @@ public class P2P
 
         this.peers = peers;
     }
+
+    Peer getPeer(int peerID) {
+        for (Peer p : peers) {
+            if (p.peerID == peerID) return p;
+        }
+        return null;
+    }
 }
