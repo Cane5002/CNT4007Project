@@ -3,7 +3,7 @@ import java.util.Arrays;
 
 //TODO: static class
 //TODO: error handling on wrong array sizes
-class Message 
+class Message implements TCPMessage
 {
     private int length;
     private byte type;

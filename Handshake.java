@@ -1,11 +1,11 @@
 // handshake message class (expects string input with length 32)
-public class Handshake
+public class Handshake implements TCPMessage
 {
     String header;
     String zeroBits;
     int peerID;
 
-    Handshake(String message)
+    public Handshake(String message)
     {
         try
         {
@@ -36,7 +36,7 @@ public class Handshake
     }
 
 
-    byte[] toByte()
+    public byte[] toBytes()
     {
         String result = header + zeroBits + Integer.toString(peerID);
         return result.getBytes();
