@@ -6,6 +6,7 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 
 public class TorrentFile {
     public class Piece {
@@ -22,7 +23,7 @@ public class TorrentFile {
     int pieceCnt;
     // Array of pieces | each piece is a byte array
     Piece pieces[];
-    boolean bitfield[];
+    byte bitfield[];
 
     public TorrentFile(String fileName, int fileSize_, int pieceSize_) {
         file = new File(fileName);
@@ -30,21 +31,56 @@ public class TorrentFile {
         pieceSize = pieceSize_;
         pieceCnt = (fileSize+pieceSize-1)/pieceSize;// # of pieces = ceil(fileSize/pieceSize);
         pieces = new Piece[pieceCnt];
-        bitfield = new boolean[pieceCnt];
+        bitfield = new byte[(pieceCnt+7)/8];
     }
     
     public byte[] getPiece(int index) {
-        if (bitfield[index]) return pieces[index].bytes;
+        if (hasPiece(index)) return pieces[index].bytes;
         else return null;
+    }
+
+    public byte[] getPiecePayload(int index) {
+        if (!hasPiece(index)) return null;
+
+        byte[] piece = pieces[index].bytes;
+        byte[] returnBytes = new byte[piece.length+4];
+        
+        byte i = 0;
+        for (byte b : ByteBuffer.allocate(4).putInt(index).array()) {
+            returnBytes[i++] = b;
+        }
+        for (byte b : piece) {
+            returnBytes[i++] = b;
+        }
+
+        return returnBytes;
     }
 
     public void setPiece(int index, byte[] bytes) {
         pieces[index] = new Piece(bytes);
-        bitfield[index] = true;
+        bitfield[index/8] |= (128>>(index%8));
     }
 
-    public Boolean hasPiece(int index) {
-        return bitfield[index];
+    public boolean hasPiece(int index) {
+        return ((bitfield[index/8] & (128>>(index%8))) != 0);
+    }
+
+    public boolean hasFile() {
+        for (int i = 0; i < pieceCnt; i++) {
+            if (!hasPiece(i)) return false;
+        }
+        return true;
+    }
+
+    public boolean noPieces() {
+        for (int i = 0; i < pieceCnt; i++) {
+            if (hasPiece(i)) return false;
+        }
+        return true;
+    }
+
+    public byte[] getBitfield() {
+        return bitfield;
     }
 
     // Load File into bitfiled
@@ -63,11 +99,12 @@ public class TorrentFile {
         } catch (IOException e) {
                 System.out.println(e);
         }
-        Arrays.fill(bitfield, true);
+        Arrays.fill(bitfield, (byte)0);
     }
 
-    // Consolidate pieces and generate complete file
-    public void generateFile() {
+    // Consolidate pieces and generate complete file / return success
+    public boolean generateFile() {
+        if (!hasFile()) return false;
         try {
             file.createNewFile();
         } catch (IOException e) {
@@ -77,8 +114,10 @@ public class TorrentFile {
             for (int i = 0; i < pieceCnt; i++) {
                 data.write(pieces[i].bytes);
             }
+            return true;
         } catch (IOException e) {
                 System.out.println(e);
         }
+        return false;
     }
 }
