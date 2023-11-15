@@ -45,9 +45,8 @@ public class Bitfield {
         return bitfield;
     }
 
-    public List<Integer> getInterestedPieces(Bitfield otherBitfield) {
+    public List<Integer> getInterestedPieces(byte[] other) {
         List<Integer> pieces = new ArrayList<Integer>();
-        byte[] other = otherBitfield.getBytes();
 
         for (int i = 0; i < bitfield.length; i++) {
             byte missing = (byte) (other[i] & ~(bitfield[i]));
@@ -58,5 +57,8 @@ public class Bitfield {
         }
 
         return pieces;
+    }
+    public List<Integer> getInterestedPieces(Bitfield other) {
+        return getInterestedPieces(other.getBytes());
     }
 }
