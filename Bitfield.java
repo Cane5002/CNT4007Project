@@ -8,6 +8,10 @@ public class Bitfield {
         length = length_;
         bitfield = new byte[(length+7)/8];
     }
+    
+    public Bitfield(byte[] bitfield_) {
+        bitfield = bitfield_;
+    }
 
     public boolean hasPiece(int index) {
         return ((bitfield[index/8] & (128>>(index%8))) != 0);
