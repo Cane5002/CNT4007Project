@@ -23,7 +23,7 @@ public class TorrentFile {
     int pieceCnt;
     // Array of pieces | each piece is a byte array
     Piece pieces[];
-    byte bitfield[];
+    Bitfield bitfield;
 
     public TorrentFile(String fileName, int fileSize_, int pieceSize_) {
         file = new File(fileName);
@@ -31,7 +31,7 @@ public class TorrentFile {
         pieceSize = pieceSize_;
         pieceCnt = (fileSize+pieceSize-1)/pieceSize;// # of pieces = ceil(fileSize/pieceSize);
         pieces = new Piece[pieceCnt];
-        bitfield = new byte[(pieceCnt+7)/8];
+        bitfield = new Bitfield(pieceCnt);
     }
     
     public byte[] getPiece(int index) {
@@ -58,29 +58,23 @@ public class TorrentFile {
 
     public void setPiece(int index, byte[] bytes) {
         pieces[index] = new Piece(bytes);
-        bitfield[index/8] |= (128>>(index%8));
+        bitfield.setPiece(index);
     }
 
     public boolean hasPiece(int index) {
-        return ((bitfield[index/8] & (128>>(index%8))) != 0);
+        return bitfield.hasPiece(index);
     }
 
     public boolean hasFile() {
-        for (int i = 0; i < pieceCnt; i++) {
-            if (!hasPiece(i)) return false;
-        }
-        return true;
+        return bitfield.allPieces();
     }
 
     public boolean noPieces() {
-        for (int i = 0; i < pieceCnt; i++) {
-            if (hasPiece(i)) return false;
-        }
-        return true;
+        return bitfield.noPieces();
     }
 
-    public byte[] getBitfield() {
-        return bitfield;
+    public byte[] getBitfieldPayload() {
+        return bitfield.getBytes();
     }
 
     // Load File into bitfiled
@@ -99,7 +93,7 @@ public class TorrentFile {
         } catch (IOException e) {
                 System.out.println(e);
         }
-        Arrays.fill(bitfield, (byte)0);
+        bitfield.setAllPieces();
     }
 
     // Consolidate pieces and generate complete file / return success
