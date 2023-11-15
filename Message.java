@@ -92,3 +92,60 @@ class Message implements TCPMessage
         return "This is a message of length " + length + " and of type " + type;
     }
 }
+
+// Message types
+class ChokeMessage extends Message {
+    public static final byte TYPE = 0;
+    ChokeMessage() {
+        super(1, TYPE, new byte[0]);
+    }
+}
+class UnchokeMessage extends Message {
+    public static final byte TYPE = 1;
+    UnchokeMessage() {
+        super(1, TYPE, new byte[0]);
+    }
+}
+class InterestedMessage extends Message {
+    public static final byte TYPE = 2;
+    InterestedMessage() {
+        super(1, TYPE, new byte[0]);
+    }
+}
+class NotInterestedMessage extends Message {
+    public static final byte TYPE = 3;
+    NotInterestedMessage() {
+        super(1, TYPE, new byte[0]);
+    }
+}
+class HaveMessage extends Message {
+    public static final byte TYPE = 4;
+    HaveMessage(byte[] pieceIndex) {
+        super(pieceIndex.length+1, TYPE, pieceIndex);
+    }
+    HaveMessage(int pieceIndex) {
+        super(5, TYPE, ByteBuffer.allocate(4).putInt(pieceIndex).array());
+    }
+}
+class BitfieldMessage extends Message {
+    public static final byte TYPE = 5;
+    public BitfieldMessage(byte[] bitfield) {
+        super(bitfield.length+1, TYPE, bitfield);
+    }
+}
+class RequestMessage extends Message {
+    public static final byte TYPE = 6;
+    RequestMessage(byte[] pieceIndex) {
+        super(pieceIndex.length+1, TYPE, pieceIndex);
+    }
+    RequestMessage(int pieceIndex) {
+        super(5, TYPE, ByteBuffer.allocate(4).putInt(pieceIndex).array());
+    }
+}
+class PieceMessage extends Message {
+    public static final byte TYPE = 7;
+    PieceMessage(byte[] payload) {
+        super(payload.length+1, TYPE, payload);
+    }
+}
+

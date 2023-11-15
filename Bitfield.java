@@ -23,20 +23,6 @@ public class Bitfield {
         bitfield[index/8] |= (128>>(index%8));
     }
 
-    public boolean noPieces() {
-        for (int i = 0; i < length; i++) {
-            if (hasPiece(i)) return false;
-        }
-        return true;
-    }
-
-    public boolean allPieces() {
-        for (int i = 0; i < length; i++) {
-            if (!hasPiece(i)) return false;
-        }
-        return true;
-    }
-
     public void setAllPieces() {
         Arrays.fill(bitfield, (byte)255);
     }

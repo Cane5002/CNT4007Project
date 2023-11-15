@@ -403,7 +403,7 @@ public class PeerService extends Thread {
     }
 
     //sending a message to a specific neighbor
-    public static void sendMessage(Message message, Neighbor to)
+    public static void sendMessage(TCPMessage message, Neighbor to)
     {
         try{
             

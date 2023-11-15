@@ -1,18 +1,27 @@
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.ConnectException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
-import java.util.logging.Handler;
+import java.nio.ByteBuffer;
+import java.util.Map;
+import java.util.HashMap;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.PriorityQueue;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class peerProcess {
     static int peerID;
     static P2P config;
     static TorrentFile file;
+
+    static Map<Integer, Neighbor> neighbors = new HashMap<Integer, Neighbor>();
+
+    static Logger log;
+
 
     public static void main (String[] args) {
         // ------------- SETUP ---------------
@@ -24,10 +33,17 @@ public class peerProcess {
         config = new P2P();
 
         // File setup
-        file = new TorrentFile(config.fileName, config.fileSize, config.pieceSize);
+        file = new TorrentFile(String.format("./%d/%s",peerID,config.fileName), config.fileSize, config.pieceSize);
         if (config.getPeer(peerID).hasFile) file.loadFile();
 
-        int connID = 0;
+        // Logger setup
+        log = new Logger(peerID);
+
+        // ------------- PROTOCOL -------------
+        // Protocol manages sending of data
+        new PreferredProtocol().start();
+        new OptimisticProtocol().start();
+
         // ------------- CLIENT ------------
         // Connect to each previous peer
         for (Peer p : config.peers) {
@@ -35,71 +51,101 @@ public class peerProcess {
             if (p.peerID==peerID) break;
 
             // Create connection
-            new Connection(p.hostName, p.portNumber, connID++).start();
+            new Connection(p.hostName, p.portNumber, p.peerID).start();
         }
 
         // ------------- SERVER ------------
         // Listen for future peer connections
-        ServerSocket server = new ServerSocket(config.getPeer(peerID).portNumber);
-
-		try(server) {
-			while(true) {
-				new Connection(server.accept(),connID++).start();
-			}
+        try(ServerSocket server = new ServerSocket(config.getPeer(peerID).portNumber)) {
+            while(true) {
+                new Connection(server.accept()).start();
+            }
         }
-
-
+        catch(IOException ioException){
+            ioException.printStackTrace();
+        }
     }
 
     // REFERENCE: Client.java
-    private static class Connection extends Thread {
+    public static class Connection extends Thread {
         private Socket connection;           //socket connect to the server
         private ObjectOutputStream out;         //stream write to the socket
         private ObjectInputStream in;          //stream read from the socket
         
-        private String host;
-        private int port;
-        private int id;
+        boolean client;
+        int neighborID;
 
-        public Connection(String host_, int port_, int id_) {
-            host = host_;
-            port = port_;
-            id = id_;
-        }
-
-        public Connection(Socket connection_, int id_) {
-            connection = connection_;
-            id = id_;
-        }
-
-        public void run() {
+        public Connection(String host, int port, int neighborID_) {
+            client = true;
+            neighborID = neighborID_;
             try {
-                //create a socket to connect to the server
                 connection = new Socket(host, port);
-                System.out.println(String.format("Connected to %s in port %d", host, port));
-                //initialize inputStream and outputStream
-                out = new ObjectOutputStream(connection.getOutputStream());
-                out.flush();
-                in = new ObjectInputStream(connection.getInputStream());
-                
-                //get Input from standard input
-                BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(System.in));
-                while(true) {
-                    // Exchange messages
-
-                }
+                System.out.println(String.format("Connected to Peer %d at %s in Port %d",neighborID, host, port));
             }
             catch (ConnectException e) {
                     System.err.println("Connection refused. You need to initiate a server first.");
-            } 
-            // catch ( ClassNotFoundException e ) {
-            //             System.err.println("Class not found");
-            //     } 
+            }
             catch(UnknownHostException unknownHost){
                 System.err.println("You are trying to connect to an unknown host!");
             }
             catch(IOException ioException){
                 ioException.printStackTrace();
+            }
+        }
+
+        public Connection(Socket connection_) {
+            client = false;
+            connection = connection_;
+            System.out.println(String.format("Peer %d is connected",neighborID));
+        }
+
+        public void run() {
+            try {
+                // Initialize inputStream and outputStream
+                out = new ObjectOutputStream(connection.getOutputStream());
+                out.flush();
+                in = new ObjectInputStream(connection.getInputStream());
+
+                // Handshake
+                sendMessage(new Handshake(peerID));
+                if (client) {
+                    // Verify peerID of server
+                    int handshakeID = new Handshake(readMessage()).peerID;
+                    if (neighborID != handshakeID) throw new Exception(String.format("Neighbor %d returned unexpected peerID %d", neighborID, handshakeID));
+                }
+                else neighborID = new Handshake(readMessage()).peerID;
+                log.logTCPConn(neighborID, client);
+
+                // Send bitfield
+                if (!file.noPieces()) sendMessage(new BitfieldMessage(file.getBitfieldPayload()));
+
+                // Add ass neighbor
+                neighbors.put(neighborID, new Neighbor(this, file.getMaxPieceCount()));
+
+                // Listen for messages
+                while(true) {
+                    Message message =  new Message(readMessage());
+                    switch(message.getType()) {
+                        case ChokeMessage.TYPE -> receiveChoke();
+                        case UnchokeMessage.TYPE -> receiveUnchoke();
+                        case InterestedMessage.TYPE -> receiveInterested();
+                        case NotInterestedMessage.TYPE -> receiveNotInterested();
+                        case HaveMessage.TYPE -> receiveHave(message.getPayload());
+                        case BitfieldMessage.TYPE -> receiveBitfield(message.getPayload());
+                        case RequestMessage.TYPE -> receiveRequest(message.getPayload());
+                        case PieceMessage.TYPE -> receivePiece(message.getPayload());
+                        default -> System.out.println("Type unrecognized");
+                    }
+                }
+            }
+            catch ( ClassNotFoundException e ) {
+                System.err.println("Class not found");
+            }
+			catch(IOException e){
+				e.printStackTrace();
+			}
+            catch(Exception e) {
+                e.printStackTrace();
             }
             finally{
                 //Close connections
@@ -113,10 +159,197 @@ public class peerProcess {
                 }
             }
         }
+
+        void sendMessage(TCPMessage msg) throws IOException {
+            //stream write the message
+            out.writeObject(msg.toBytes());
+            out.flush();
+        }
+
+        byte[] readMessage() throws IOException,ClassNotFoundException {
+            return (byte[])in.readObject();
+        }
+
+        // ---------------- MESSAGE HANDLERS ----------------
+            // ------- CHOKE -------
+        //receiving a choke means you can no longer request from that neighbor (CLIENT)
+        public void receiveChoke()
+        {
+            System.out.println("Choking message from Peer" + neighborID);
+            log.logChoked(neighborID);
+        }
+        
+            // ------- UNCHOKE -------
+        //receiving an unchoke means you can start requesting from that neighbor (CLIENT)
+        public void receiveUnchoke()
+        {
+            System.out.println("Unchoking message from Peer" + neighborID);
+            log.logUnchoked(neighborID);
+        }
+        
+            // ------- INTERESTED --------
+        public void receiveInterested() 
+        {
+            System.out.println("Interested message from Peer" + neighborID);
+            log.logInterested(neighborID);
+        }
+        
+            // -------- NOT INTERESTED ---------
+        public void receiveNotInterested() 
+        {
+            System.out.println("Not Interested message from Peer" + neighborID);
+            log.logNotInterested(neighborID);
+        }
+
+            // --------- HAVE -----------
+        public void receiveHave(byte[] payload) throws IOException
+        {
+            int pieceIndex = ByteBuffer.wrap(payload).getInt();
+            log.logHave(neighborID, pieceIndex);
+
+            // Update neighbor bitfield
+            neighbors.get(neighborID).updateBitfield(pieceIndex);
+            
+            // check if we have the same piece
+            // if yes -> not interested
+            if (file.hasPiece(pieceIndex)) sendMessage(new NotInterestedMessage());
+            // if not -> interested
+            else sendMessage(new InterestedMessage());
+        }
+        
+            // --------- BITFIELD ------------
+        public void receiveBitfield(byte[] bitfield) throws IOException
+        {
+            neighbors.get(neighborID).initBitfield(bitfield);
+
+            // check if this peer has the pieces the sender has
+            // if sender has something this peer does not, we send an interested message
+            if(!file.bitfield.getInterestedPieces(bitfield).isEmpty()) sendMessage(new InterestedMessage());
+            // send not interested
+            else sendMessage(new NotInterestedMessage());
+        }
+        
+            // ---------- REQUEST ------------
+        public void receiveRequest(byte[] payload)
+        {
+
+        }
+
+            // ---------- PIECE ----------
+        public void receivePiece(byte[] piece) 
+        {
+            // 
+            System.out.println("Piece message from " + neighborID);
+            // log.logDownload(fromID, index, file.getPieceCount())
+        }
+
     }
 
-    // REFERENCE: Server.java
-    private static class NeighborManager extends Thread {
+    public static class PreferredProtocol extends Thread {
+
+        public void run() {
+            // Manage Choked/Unchoked Neighbors
+            try
+            {
+                Thread.sleep(config.unchokingInterval*1000);
+                searchForNeighbors();
+
+            }
+            catch(InterruptedException e)
+            {
+                e.printStackTrace();
+            }
+            catch(IOException e)
+            {
+                e.printStackTrace();
+            }
+        }
+
+        //TODO:may have to not use priority queue to ensure random selection when equal
+            //could use randomized order? 
+            //returns success or fail
+        public static boolean searchForNeighbors() throws IOException
+        {
+            if(neighbors.size() < 1) return false;
+
+            //find numPreferredNeighbors # of interested neighbors
+            int neighborsFound = 0;
+
+
+            //max heap for the neighbors
+            PriorityQueue<Neighbor> neighborRanking = new PriorityQueue<Neighbor>(
+                (int)neighbors.size(), (a,b)->Neighbor.compare(b, a)
+            );
+
+            //loop through all the neighbors
+            for(Map.Entry<Integer, Neighbor> n : neighbors.entrySet())
+            {
+                n.getValue().preferred = false;
+                if(n.getValue().interested)
+                {
+                    //add to max heap (based on rate)
+                    neighborRanking.add(n.getValue());
+                    neighborsFound++;
+                }
+            }
+
+            //set preferred neighbors
+            for(int i = 0; i < config.numPreferredNeighbors && i < neighborRanking.size(); i++)
+            {
+                //get the top ranking neighbor
+                neighborRanking.poll().preferred = true;
+            }
+
+            //unchoke all the preferred neighbors
+            for(Map.Entry<Integer, Neighbor> n : neighbors.entrySet())
+            {
+
+                if(n.getValue().connection == null)
+                    continue;
+
+                if(n.getValue().preferred && n.getValue().choked) n.getValue().sendMessage(new UnchokeMessage());
+                else if(!n.getValue().preferred && !n.getValue().choked) n.getValue().sendMessage(new ChokeMessage());
+            }
+
+            return true;
+
+        }
+
+        
+    }
+
+    public static class OptimisticProtocol extends Thread {
+        public void run() {
+            // Manage Optimisticallly Unchoked Neighbors
+            try
+            {
+                Thread.sleep(config.optUnchokingInterval*1000);
+                optimisticallyUnchoke();
+            }
+            catch(InterruptedException e)
+            {
+                e.printStackTrace();
+            }
+            catch(IOException e)
+            {
+                e.printStackTrace();
+            }
+        }
+
+        public void optimisticallyUnchoke() throws IOException
+        {
+            //get a random choked neighbor and unchoke them
+            List<Neighbor> chokedNeighbors = new ArrayList<Neighbor>();
+            for (Map.Entry<Integer,Neighbor> n : neighbors.entrySet()) {
+                if (n.getValue().interested && n.getValue().choked) chokedNeighbors.add(n.getValue());
+            }
+            
+            
+            if(!chokedNeighbors.isEmpty()) {
+                int randomNum = ThreadLocalRandom.current().nextInt(0, chokedNeighbors.size());
+                chokedNeighbors.get(randomNum).sendMessage(new UnchokeMessage());
+            }
+        }
     }
 
 }
