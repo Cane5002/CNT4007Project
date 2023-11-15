@@ -1,4 +1,6 @@
 import java.util.Arrays;
+import java.util.List;
+import java.util.ArrayList;
 
 public class Bitfield {
     byte bitfield[];
@@ -41,5 +43,20 @@ public class Bitfield {
 
     public byte[] getBytes() {
         return bitfield;
+    }
+
+    public List<Integer> getInterestedPieces(Bitfield otherBitfield) {
+        List<Integer> pieces = new ArrayList<Integer>();
+        byte[] other = otherBitfield.getBytes();
+
+        for (int i = 0; i < bitfield.length; i++) {
+            byte missing = (byte) (other[i] & ~(bitfield[i]));
+            if (missing == 0) continue;
+            for (int j = 0; j < 8; j++) {
+                if ((missing & (128>>j)) != 0) pieces.add(i*8+j);
+            }
+        }
+
+        return pieces;
     }
 }
