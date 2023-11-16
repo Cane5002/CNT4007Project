@@ -1,4 +1,5 @@
 import java.io.ObjectOutputStream;
+import java.io.IOException;
 import java.net.Socket;
 
 //TODO: adjust to fit the Peer class
@@ -51,6 +52,29 @@ public class Neighbor
         this.rate = rate;
         this.port = port;
         
+    }
+
+    public peerProcess.Connection conn;
+    public Bitfield bitfield;
+    public boolean choked;
+    public Neighbor(peerProcess.Connection conn_, int bitfieldLength) {
+        conn = conn_;
+        bitfield = new Bitfield(bitfieldLength);
+        chunksSent = 0;
+        interested = false;
+        preferred = false;
+        choked = true;
+        rate = -1;
+        peer = null;
+    }
+    public void initBitfield(byte[] bytes) {
+        bitfield = new Bitfield(bytes);
+    }
+    public void updateBitfield(int index) {
+        bitfield.setPiece(index);
+    }
+    public void sendMessage(TCPMessage message) throws IOException {
+        conn.sendMessage(message);
     }
 
     public int getPort()

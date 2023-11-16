@@ -9,7 +9,7 @@ public class Logger {
 
     public Logger(int _peerID) {
         peerID = _peerID;
-        File logFile = new File(String.format("log_peer_%s.log", peerID));
+        logFile = new File(String.format("log_peer_%s.log", peerID));
         try {
             logFile.createNewFile();
         } catch (IOException e) {
