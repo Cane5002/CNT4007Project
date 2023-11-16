@@ -104,6 +104,7 @@ public class TorrentFile {
                 System.out.println(e);
         }
         bitfield.setAllPieces();
+        currentPieceCnt = pieceCnt; //we have all the pieces
     }
 
     // Consolidate pieces and generate complete file / return success
