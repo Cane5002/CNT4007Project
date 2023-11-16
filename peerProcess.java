@@ -275,7 +275,6 @@ public class peerProcess {
             // --------- BITFIELD ------------
         public void receiveBitfield(byte[] bitfield) throws IOException
         {
-            System.out.println("Received bitfield");
             neighbors.get(neighborID).initBitfield(bitfield);
 
             // check if this peer has the pieces the sender has
@@ -292,10 +291,11 @@ public class peerProcess {
         {
             Neighbor from = neighbors.get(neighborID);
             //sending a piece
-            if(from.canRequest)
+            if(!from.choked)
             {
                 int pieceIndex = ByteBuffer.wrap(payload).getInt();
                 sendMessage(new PieceMessage(file.getPiece(pieceIndex)));
+                System.out.println("Sent piece to " + neighborID); 
             }
         }
 
@@ -354,7 +354,7 @@ public class peerProcess {
                 //sending request message
                 sendMessage(new RequestMessage(interestedPieces.get(randIndex)));
                 currentlyRequesting.put(randIndex, from);
-
+                System.out.println("Sent request to " + neighborID);
                 return true;
 
             }
@@ -434,9 +434,15 @@ public class peerProcess {
                     continue;
 
                 if(n.getValue().preferred && n.getValue().choked) 
+                {
                     n.getValue().sendMessage(new UnchokeMessage());
+                    n.getValue().choked = false;
+                }
                 else if(!n.getValue().preferred && !n.getValue().choked) 
+                {
                     n.getValue().sendMessage(new ChokeMessage());
+                    n.getValue().choked = true;
+                }
             }
 
             return true;
@@ -476,7 +482,11 @@ public class peerProcess {
             //get a random choked neighbor and unchoke them
             if(!chokedNeighbors.isEmpty()) {
                 int randomNum = ThreadLocalRandom.current().nextInt(0, chokedNeighbors.size());
-                chokedNeighbors.get(randomNum).sendMessage(new UnchokeMessage());
+
+                Neighbor neighborToUnchoke = chokedNeighbors.get(randomNum);
+                neighborToUnchoke.sendMessage(new UnchokeMessage());
+                neighborToUnchoke.choked = false;
+
             }
         }
     }
