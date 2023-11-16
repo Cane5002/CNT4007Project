@@ -18,8 +18,9 @@ public class peerProcess {
     static P2P config;
     static TorrentFile file;
     static Map<Integer, Neighbor> currentlyRequesting = new HashMap<Integer, Neighbor>(); // <PieceIndex, FromNeighbor>
-
     static Map<Integer, Neighbor> neighbors = new HashMap<Integer, Neighbor>();
+    
+    static ArrayList<Connection> connections = new ArrayList<Connection>();
 
     static Logger log;
 
@@ -74,7 +75,9 @@ public class peerProcess {
         {
             try(ServerSocket server = new ServerSocket(config.getPeer(peerID).portNumber)) {
                 while(true) {
-                    new Connection(server.accept()).start();
+                    Connection connection = new Connection(server.accept());
+                    connection.start();
+                    connections.add(connection);
                 }
             }
             catch(IOException ioException){
@@ -121,6 +124,7 @@ public class peerProcess {
                     ioException.printStackTrace();
                 }
             }
+
         }
 
         public Connection(Socket connection_) {
@@ -214,6 +218,10 @@ public class peerProcess {
         byte[] readMessage() throws IOException,ClassNotFoundException {
             return (byte[])in.readObject();
         }
+        public ObjectOutputStream getOutput()
+        {
+            return out;
+        }
 
         // ---------------- MESSAGE HANDLERS ----------------
             // ------- CHOKE -------
@@ -294,7 +302,24 @@ public class peerProcess {
             if(!from.choked)
             {
                 int pieceIndex = ByteBuffer.wrap(payload).getInt();
-                sendMessage(new PieceMessage(file.getPiece(pieceIndex)));
+                byte[] piece = file.getPiece(pieceIndex);
+
+                byte[] pieceToSend = new byte[4+piece.length];
+
+                //convert the index to bytes and add to the payload
+                byte[] indexInBytes = ByteBuffer.allocate(4).putInt(pieceIndex).array();
+                for(int i = 0; i < 4; i++)
+                {
+                    pieceToSend[i] = indexInBytes[i];
+                }
+
+                //fill in the piece payload
+                for(int i = 0; i < piece.length; i++)
+                {
+                    pieceToSend[i+4] = piece[i];
+                }
+
+                sendMessage(new PieceMessage(pieceToSend));
                 System.out.println("Sent piece to " + neighborID); 
             }
         }
@@ -308,16 +333,27 @@ public class peerProcess {
 
             //we received the piece
             //TODO: file.setPiece
-            currentlyRequesting.remove(index); //for use in determineAndSetRequest
+            if(currentlyRequesting.containsKey(index))
+                currentlyRequesting.remove(index); //for use in determineAndSetRequest
 
-            System.out.println("Piece message from " + neighborID);
+            System.out.println("Piece of index " + index + " from " + neighborID);
             // log.logDownload(fromID, index, file.getPieceCount())
 
-            //TODO: 2. update everyone that i have a new piece
-            for(Map.Entry<Integer, Neighbor> neighbor : neighbors.entrySet())
+            
+            for(Connection c : connections)
             {
-                //TODO: send "have" message to the neighbor
-            }  
+                
+                try
+                {
+                    byte[] message = new HaveMessage(index).toBytes();
+                    c.getOutput().writeObject(message);
+                    c.getOutput().flush();
+                }
+                catch(IOException e)
+                {
+                    e.printStackTrace();
+                }
+            }
             
             //3. send request for a new piece
             determineAndSendRequest();
