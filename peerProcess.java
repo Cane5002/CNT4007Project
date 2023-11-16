@@ -17,6 +17,7 @@ public class peerProcess {
     static int peerID;
     static P2P config;
     static TorrentFile file;
+    static Map<Integer, Neighbor> currentlyRequesting = new HashMap<Integer, Neighbor>(); // <PieceIndex, FromNeighbor>
 
     static Map<Integer, Neighbor> neighbors = new HashMap<Integer, Neighbor>();
 
@@ -26,7 +27,10 @@ public class peerProcess {
     public static void main (String[] args) {
         // ------------- SETUP ---------------
         // Set Peer ID
-        if (args.length<1) { System.out.println("Missing arguments: [PeerID]"); return; }
+        if (args.length<1) { 
+            System.out.println("Missing arguments: [PeerID]"); 
+            return; 
+        }
         peerID = Integer.parseInt(args[0]);
 
         // Read config files
@@ -34,35 +38,46 @@ public class peerProcess {
 
         // File setup
         file = new TorrentFile(String.format("./%d/%s",peerID,config.fileName), config.fileSize, config.pieceSize);
-        if (config.getPeer(peerID).hasFile) file.loadFile();
+        if (config.getPeer(peerID).hasFile) 
+            file.loadFile();
 
         // Logger setup
         log = new Logger(peerID);
+
+        // ------------- SERVER ------------
+        // Listen for future peer connections (separate thread so server is setup before connections)
+        new ServerListener().start();
+
+        // ------------- CLIENT ------------
+        // Connect to each peer
+        for (Peer p : config.peers) {
+
+            //don't connect to self
+            if (p.peerID==peerID) continue;
+
+            // Create connection
+            new Connection(p.hostName, p.portNumber, p.peerID).start();
+        }
 
         // ------------- PROTOCOL -------------
         // Protocol manages sending of data
         new PreferredProtocol().start();
         new OptimisticProtocol().start();
 
-        // ------------- CLIENT ------------
-        // Connect to each previous peer
-        for (Peer p : config.peers) {
-            // Only connect to previous peers
-            if (p.peerID==peerID) break;
+    }
 
-            // Create connection
-            new Connection(p.hostName, p.portNumber, p.peerID).start();
-        }
-
-        // ------------- SERVER ------------
-        // Listen for future peer connections
-        try(ServerSocket server = new ServerSocket(config.getPeer(peerID).portNumber)) {
-            while(true) {
-                new Connection(server.accept()).start();
+    public static class ServerListener extends Thread 
+    {
+        public void run()
+        {
+            try(ServerSocket server = new ServerSocket(config.getPeer(peerID).portNumber)) {
+                while(true) {
+                    new Connection(server.accept()).start();
+                }
             }
-        }
-        catch(IOException ioException){
-            ioException.printStackTrace();
+            catch(IOException ioException){
+                ioException.printStackTrace();
+            }
         }
     }
 
@@ -78,25 +93,37 @@ public class peerProcess {
         public Connection(String host, int port, int neighborID_) {
             client = true;
             neighborID = neighborID_;
-            try {
-                connection = new Socket(host, port);
-                System.out.println(String.format("Connected to Peer %d at %s in Port %d",neighborID, host, port));
-            }
-            catch (ConnectException e) {
-                    System.err.println("Connection refused. You need to initiate a server first.");
-            }
-            catch(UnknownHostException unknownHost){
-                System.err.println("You are trying to connect to an unknown host!");
-            }
-            catch(IOException ioException){
-                ioException.printStackTrace();
+            for(int i = 0; i < 20; i++)
+            {
+                try {
+
+                    connection = new Socket(host, port);
+                    System.out.println(String.format("Connected to Peer %d at %s in Port %d",neighborID, host, port));
+                    break;
+                }
+                catch (ConnectException e) {
+                        System.err.println("Attempt " + i + ". Connection refused. You need to initiate a server first.");
+                        try
+                        {
+                            Thread.sleep(1000);
+                        }
+                        catch(InterruptedException sleepError)
+                        {
+                            sleepError.printStackTrace();
+                        }
+                }
+                catch(UnknownHostException unknownHost){
+                    System.err.println("You are trying to connect to an unknown host!");
+                }
+                catch(IOException ioException){
+                    ioException.printStackTrace();
+                }
             }
         }
 
         public Connection(Socket connection_) {
             client = false;
             connection = connection_;
-            System.out.println(String.format("Peer %d is connected",neighborID));
         }
 
         public void run() {
@@ -111,15 +138,24 @@ public class peerProcess {
                 if (client) {
                     // Verify peerID of server
                     int handshakeID = new Handshake(readMessage()).peerID;
-                    if (neighborID != handshakeID) throw new Exception(String.format("Neighbor %d returned unexpected peerID %d", neighborID, handshakeID));
+                    if (neighborID != handshakeID) 
+                        throw new Exception(String.format("Neighbor %d returned unexpected peerID %d", neighborID, handshakeID));
                 }
-                else neighborID = new Handshake(readMessage()).peerID;
+                //server
+                else 
+                {
+                    neighborID = new Handshake(readMessage()).peerID;
+                    System.out.println(String.format("Peer %d is connected",neighborID));
+                }
                 log.logTCPConn(neighborID, client);
 
                 // Send bitfield
-                if (!file.noPieces()) sendMessage(new BitfieldMessage(file.getBitfieldPayload()));
-
-                // Add ass neighbor
+                if (!file.noPieces()) 
+                {
+                    System.out.println("Sending bitfield");
+                    sendMessage(new BitfieldMessage(file.getBitfieldPayload()));
+                }
+                // Add neighbor without pieces
                 neighbors.put(neighborID, new Neighbor(this, file.getMaxPieceCount()));
 
                 // Listen for messages
@@ -160,10 +196,17 @@ public class peerProcess {
             }
         }
 
-        void sendMessage(TCPMessage msg) throws IOException {
+        void sendMessage(TCPMessage msg) {
             //stream write the message
-            out.writeObject(msg.toBytes());
-            out.flush();
+            try
+            {
+                out.writeObject(msg.toBytes());
+                out.flush();
+            }
+            catch(IOException e)
+            {
+                e.printStackTrace();
+            }
         }
 
         byte[] readMessage() throws IOException,ClassNotFoundException {
@@ -176,6 +219,7 @@ public class peerProcess {
         public void receiveChoke()
         {
             System.out.println("Choking message from Peer" + neighborID);
+            neighbors.get(neighborID).canRequest = false;
             log.logChoked(neighborID);
         }
         
@@ -184,6 +228,11 @@ public class peerProcess {
         public void receiveUnchoke()
         {
             System.out.println("Unchoking message from Peer" + neighborID);
+
+            Neighbor from = neighbors.get(neighborID);
+            from.canRequest = true;
+            determineAndSendRequest();
+
             log.logUnchoked(neighborID);
         }
         
@@ -191,6 +240,7 @@ public class peerProcess {
         public void receiveInterested() 
         {
             System.out.println("Interested message from Peer" + neighborID);
+            neighbors.get(neighborID).interested = true;
             log.logInterested(neighborID);
         }
         
@@ -198,6 +248,7 @@ public class peerProcess {
         public void receiveNotInterested() 
         {
             System.out.println("Not Interested message from Peer" + neighborID);
+            neighbors.get(neighborID).interested = false;
             log.logNotInterested(neighborID);
         }
 
@@ -212,35 +263,107 @@ public class peerProcess {
             
             // check if we have the same piece
             // if yes -> not interested
-            if (file.hasPiece(pieceIndex)) sendMessage(new NotInterestedMessage());
+            if (file.hasPiece(pieceIndex)) 
+                sendMessage(new NotInterestedMessage());
             // if not -> interested
-            else sendMessage(new InterestedMessage());
+            else 
+                sendMessage(new InterestedMessage());
         }
         
             // --------- BITFIELD ------------
         public void receiveBitfield(byte[] bitfield) throws IOException
         {
+            System.out.println("Received bitfield");
             neighbors.get(neighborID).initBitfield(bitfield);
 
             // check if this peer has the pieces the sender has
             // if sender has something this peer does not, we send an interested message
-            if(!file.bitfield.getInterestedPieces(bitfield).isEmpty()) sendMessage(new InterestedMessage());
+            if(!file.bitfield.getInterestedPieces(bitfield).isEmpty()) 
+                sendMessage(new InterestedMessage());
             // send not interested
-            else sendMessage(new NotInterestedMessage());
+            else
+                sendMessage(new NotInterestedMessage());
         }
         
             // ---------- REQUEST ------------
         public void receiveRequest(byte[] payload)
         {
-
+            Neighbor from = neighbors.get(neighborID);
+            //sending a piece
+            if(from.canRequest)
+            {
+                int pieceIndex = ByteBuffer.wrap(payload).getInt();
+                sendMessage(new PieceMessage(file.getPiece(pieceIndex)));
+            }
         }
 
             // ---------- PIECE ----------
         public void receivePiece(byte[] piece) 
         {
-            // 
+            //1. get piece 
+            byte[] indexBytes = {piece[0], piece[1], piece[2], piece[3]};
+            int index = ByteBuffer.wrap(indexBytes).getInt();
+
+            //we received the piece
+            //TODO: file.setPiece
+            currentlyRequesting.remove(index); //for use in determineAndSetRequest
+
             System.out.println("Piece message from " + neighborID);
             // log.logDownload(fromID, index, file.getPieceCount())
+
+            //TODO: 2. update everyone that i have a new piece
+            for(Map.Entry<Integer, Neighbor> neighbor : neighbors.entrySet())
+            {
+                //TODO: send "have" message to the neighbor
+            }  
+            
+            //3. send request for a new piece
+            determineAndSendRequest();
+        }
+
+        // ---- HELPERS -----
+        public boolean determineAndSendRequest()
+        {
+            //getting the neighbor
+            Neighbor from = neighbors.get(neighborID);
+
+            //cannot request from them
+            if(!from.canRequest)
+                return false;
+
+            //requesting a piece
+            List<Integer> interestedPieces = file.bitfield.getInterestedPieces(from.bitfield);
+            if(!interestedPieces.isEmpty())
+            {
+                //get random piece
+                int randIndex = ThreadLocalRandom.current().nextInt(0, interestedPieces.size());
+
+                //we're currently trying to get that piece from someone else
+                if(currentlyRequesting.containsKey(randIndex))
+                {
+                    //we're not allowed to get that piece from them (dangling request)
+                    if(!currentlyRequesting.get(randIndex).canRequest)
+                    {
+                        //remove that dangling request
+                        currentlyRequesting.remove(randIndex);
+                    }
+                }
+
+                //sending request message
+                sendMessage(new RequestMessage(interestedPieces.get(randIndex)));
+                currentlyRequesting.put(randIndex, from);
+
+                return true;
+
+            }
+            //no longer need any pieces
+            else
+            {
+                if(currentlyRequesting.size() > 0)
+                    currentlyRequesting.clear();
+                return false;
+            }
+
         }
 
     }
@@ -270,7 +393,8 @@ public class peerProcess {
             //returns success or fail
         public static boolean searchForNeighbors() throws IOException
         {
-            if(neighbors.size() < 1) return false;
+            if(neighbors.size() < 1) 
+                return false;
 
             //find numPreferredNeighbors # of interested neighbors
             int neighborsFound = 0;
@@ -307,8 +431,10 @@ public class peerProcess {
                 if(n.getValue().connection == null)
                     continue;
 
-                if(n.getValue().preferred && n.getValue().choked) n.getValue().sendMessage(new UnchokeMessage());
-                else if(!n.getValue().preferred && !n.getValue().choked) n.getValue().sendMessage(new ChokeMessage());
+                if(n.getValue().preferred && n.getValue().choked) 
+                    n.getValue().sendMessage(new UnchokeMessage());
+                else if(!n.getValue().preferred && !n.getValue().choked) 
+                    n.getValue().sendMessage(new ChokeMessage());
             }
 
             return true;
@@ -338,13 +464,14 @@ public class peerProcess {
 
         public void optimisticallyUnchoke() throws IOException
         {
-            //get a random choked neighbor and unchoke them
+            //create a list of all of the choked neighbors
             List<Neighbor> chokedNeighbors = new ArrayList<Neighbor>();
             for (Map.Entry<Integer,Neighbor> n : neighbors.entrySet()) {
-                if (n.getValue().interested && n.getValue().choked) chokedNeighbors.add(n.getValue());
+                if (n.getValue().interested && n.getValue().choked) 
+                    chokedNeighbors.add(n.getValue());
             }
             
-            
+            //get a random choked neighbor and unchoke them
             if(!chokedNeighbors.isEmpty()) {
                 int randomNum = ThreadLocalRandom.current().nextInt(0, chokedNeighbors.size());
                 chokedNeighbors.get(randomNum).sendMessage(new UnchokeMessage());

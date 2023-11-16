@@ -3,6 +3,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 
+//TODO: (potentially): clear log when first running peerProcess(?)
 public class Logger {
     File logFile;
     int peerID;

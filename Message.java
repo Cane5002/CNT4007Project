@@ -1,7 +1,6 @@
 import java.nio.ByteBuffer;
 import java.util.Arrays; 
 
-//TODO: static class
 //TODO: error handling on wrong array sizes
 class Message implements TCPMessage
 {
