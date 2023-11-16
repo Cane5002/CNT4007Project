@@ -228,6 +228,8 @@ public class PeerService extends Thread {
                             //should only run once per neighbor
                             receivedHandshake = true;
 
+                            //TODO: send bitfield
+
                         }
                     }
                 }
@@ -293,12 +295,16 @@ public class PeerService extends Thread {
     //receiving a choke means you can no longer request from that neighbor (CLIENT)
     public static void receiveChoke(Neighbor from)
     {
+        from.canRequest = false;
         System.out.println("Choking message from " + from);
     }
 
     //receiving an unchoke means you can start requesting from that neighbor (CLIENT)
     public static void receiveUnchoke(Neighbor from)
     {
+        //send a request
+        from.canRequest = true;
+        
         System.out.println("Unchoking message from " + from);
     }
 
@@ -476,13 +482,13 @@ public class PeerService extends Thread {
         // interested, no payload
         else if(type == 2)
         {
-
+            from.interested = true;
         }
 
         // not interested, no payload
         else if(type == 3)
         {
-
+            from.interested = false;
         }
         
         // have, 4 byte piece index field

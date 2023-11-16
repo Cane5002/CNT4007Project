@@ -11,6 +11,7 @@ public class Neighbor
 
     public boolean interested;
     public boolean preferred;
+    public boolean canRequest;
     public Socket connection;
     public Peer peer;
     public ObjectOutputStream out;
@@ -23,6 +24,7 @@ public class Neighbor
         chunksSent = 0;
         interested = false;
         preferred = false;
+        canRequest = false;
         rate = -1;
         this.port = port;
         peer = null;
@@ -33,6 +35,7 @@ public class Neighbor
         chunksSent = 0;
         interested = false;
         preferred = false;
+        canRequest = false;
         rate = -1;
         this.peer = peer;
         port = peer.portNumber;
@@ -44,6 +47,7 @@ public class Neighbor
         chunksSent = 0;
         interested = false;
         preferred = false;
+        canRequest = false;
         this.rate = rate;
         this.port = port;
         
