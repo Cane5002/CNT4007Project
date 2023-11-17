@@ -56,7 +56,7 @@ public class peerProcess {
         for (Peer p : config.peers) {
 
             //don't connect to self
-            if (p.peerID==peerID) continue;
+            if (p.peerID==peerID) break;
 
             // Create connection
             new Connection(p.hostName, p.portNumber, p.peerID).start();
