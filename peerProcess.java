@@ -333,6 +333,7 @@ public class peerProcess {
 
             //we received the piece
             //TODO: file.setPiece
+            file.setPiece(index, indexBytes);
             if(currentlyRequesting.containsKey(index))
                 currentlyRequesting.remove(index); //for use in determineAndSetRequest
 
