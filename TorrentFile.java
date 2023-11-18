@@ -110,9 +110,11 @@ public class TorrentFile {
     // Consolidate pieces and generate complete file / return success
     public boolean generateFile() {
         if (!hasFile()) return false;
+        System.out.println("Generating file...");
         try {
             file.createNewFile();
         } catch (IOException e) {
+            System.out.println("Failed to create new file");
             System.out.println(e);
         }
         try (FileOutputStream os = new FileOutputStream(file); DataOutputStream data = new DataOutputStream(os)) {
