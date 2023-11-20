@@ -29,8 +29,10 @@ public class PeerService extends Thread {
 
     // TODO: storage for each peer's bitfield
     //private static byte bitfield[];
-    private static BitSet bitfield = new BitSet();
+    //private static BitSet bitfield = new BitSet();
+
     //private static Map<Integer, byte[]> bitfields = new HashMap<>();
+    static TorrentFile data = new TorrentFile(p2pConfig.fileName, p2pConfig.fileSize, p2pConfig.pieceSize);
 
 
 	public static void main(String[] args) throws Exception {
@@ -500,7 +502,7 @@ public class PeerService extends Thread {
             int someIndex = (int)pieceIndex[0];
 
             // if our bitfield's bit at that index is 0...
-            if(!bitfield.get(someIndex))
+            if(!data.hasPiece(someIndex))
             {
                 // send interested
                 byte[] empty = {};
@@ -522,16 +524,18 @@ public class PeerService extends Thread {
         {
             byte recieved[] = message.getPayload();
             BitSet recievedBitfield = byteArrayToBitSet(recieved);
-
+            BitSet thisBitfield = byteArrayToBitSet(data.getBitfieldPayload());
+            
             // check if this peer has the pieces the sender has
             boolean isInterested = false;
-            for(int i = 0; i < bitfield.length(); i++)
+            
+            for(int i = 0; i < thisBitfield.length(); i++)
             {
                 // if the sender has that piece...
                 if(recievedBitfield.get(i))
                 {
                     // check if we don't have that piece
-                    if(!bitfield.get(i))
+                    if(!thisBitfield.get(i))
                     {
                         isInterested = true;
                         break;
@@ -561,6 +565,11 @@ public class PeerService extends Thread {
         else if(type == 6)
         {
             byte pieceIndex[] = message.getPayload();
+
+            int someIndex = (int)pieceIndex[0];
+
+            byte[] piece = {};
+            Message outMessage = new Message(piece.length + 1, (byte)7, piece);
         }
 
         // piece, 4 byte piece index field + piece content

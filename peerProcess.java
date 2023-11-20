@@ -12,6 +12,8 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.PriorityQueue;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.Random;
+import java.util.Collections;
 
 public class peerProcess {
     static int peerID;
@@ -160,15 +162,32 @@ public class peerProcess {
                 while(true) {
                     Message message =  new Message(readMessage());
                     switch(message.getType()) {
-                        case ChokeMessage.TYPE -> receiveChoke();
-                        case UnchokeMessage.TYPE -> receiveUnchoke();
-                        case InterestedMessage.TYPE -> receiveInterested();
-                        case NotInterestedMessage.TYPE -> receiveNotInterested();
-                        case HaveMessage.TYPE -> receiveHave(message.getPayload());
-                        case BitfieldMessage.TYPE -> receiveBitfield(message.getPayload());
-                        case RequestMessage.TYPE -> receiveRequest(message.getPayload());
-                        case PieceMessage.TYPE -> receivePiece(message.getPayload());
-                        default -> System.out.println("Type unrecognized");
+                        case ChokeMessage.TYPE:
+                            receiveChoke();
+                            break;
+                        case UnchokeMessage.TYPE: 
+                            receiveUnchoke();
+                            break;
+                        case InterestedMessage.TYPE:
+                            receiveInterested();
+                            break;
+                        case NotInterestedMessage.TYPE:
+                            receiveNotInterested();
+                            break;
+                        case HaveMessage.TYPE:
+                            receiveHave(message.getPayload());
+                            break;
+                        case BitfieldMessage.TYPE:
+                            receiveBitfield(message.getPayload());
+                            break;
+                        case RequestMessage.TYPE:
+                            receiveRequest(message.getPayload());
+                            break;
+                        case PieceMessage.TYPE:
+                            receivePiece(message.getPayload());
+                            break;
+                        default:
+                            System.out.println("Type unrecognized");
                     }
                 }
             }
@@ -336,7 +355,7 @@ public class peerProcess {
             file.setPiece(index, pieceBytes);
             System.out.println("Piece of index " + index + " from " + neighborID);
             log.logDownload(neighborID, index, file.getPieceCount());
-            //TODO: file.setPiece
+
             if(currentlyRequesting.containsKey(index))
                 currentlyRequesting.remove(index); //for use in determineAndSetRequest
 
@@ -348,6 +367,7 @@ public class peerProcess {
 
             //3. send request for a new piece
             if (!file.generateFile()) determineAndSendRequest();
+            else log.logComplete();
         }
 
         // ---- HELPERS -----
@@ -425,8 +445,59 @@ public class peerProcess {
             if(neighbors.size() < 1) 
                 return false;
 
-            //find numPreferredNeighbors # of interested neighbors
-            int neighborsFound = 0;
+            // if this peer has the file already, randomly choose among interested neighbors
+            if(file.hasFile())
+            {
+                ArrayList<Neighbor> interestedNeighbors = new ArrayList<Neighbor>();
+                for(Map.Entry<Integer, Neighbor> n : neighbors.entrySet())
+                    if(n.getValue().interested)
+                        interestedNeighbors.add(n.getValue());
+                
+                ArrayList<Neighbor> preferredNeighbors = new ArrayList<Neighbor>();
+                ArrayList<Integer> preferredIDs = new ArrayList<Integer>();
+                int interestedNeighborSize = interestedNeighbors.size();
+                for(int i = 0; i < config.numPreferredNeighbors && i < interestedNeighborSize; i++)
+                {
+                    Collections.shuffle(interestedNeighbors);
+
+                    preferredIDs.add(interestedNeighbors.get(0).peerID);
+                    interestedNeighbors.get(0).preferred = true;
+                    preferredNeighbors.add(interestedNeighbors.get(0));
+                    interestedNeighbors.remove(0);
+                }
+                log.logPreferredNeighbors(preferredIDs);
+              
+                //unchoke all the preferred neighbors
+                for(int i = 0; i < preferredNeighbors.size(); i++)
+                {
+                    Neighbor curNeighbor = preferredNeighbors.get(i);
+                    if(curNeighbor.connection == null)
+                        continue;
+
+                    if(curNeighbor.preferred && curNeighbor.choked) 
+                    {
+                        curNeighbor.sendMessage(new UnchokeMessage());
+                        System.out.println("Unchoke Peer " + curNeighbor.peerID);
+                        log.logUnchoked(curNeighbor.peerID);
+                        curNeighbor.choked = false;
+                        curNeighbor.setRate(System.currentTimeMillis());
+                    }
+                    else if(!curNeighbor.preferred && !curNeighbor.choked) 
+                    {
+                        curNeighbor.sendMessage(new ChokeMessage());
+                        System.out.println("Choke Peer " + curNeighbor.peerID);
+                        log.logChoked(curNeighbor.peerID);
+                        curNeighbor.choked = true;
+                        curNeighbor.setRate(System.currentTimeMillis());
+                    }
+                }
+            }
+
+            // otherwise, if peer does not have the file follow the algorithm
+            else
+            {
+                //find numPreferredNeighbors # of interested neighbors
+                int neighborsFound = 0;
 
 
             //max heap for the neighbors
@@ -435,64 +506,70 @@ public class peerProcess {
                 (int)neighbors.size(), (a,b)->Neighbor.compare(b, a)
             );
 
-            //loop through all the neighbors
-            for(Map.Entry<Integer, Neighbor> n : neighbors.entrySet())
-            {
-                n.getValue().preferred = false;
-                if(n.getValue().interested)
+                //loop through all the neighbors
+                for(Map.Entry<Integer, Neighbor> n : neighbors.entrySet())
                 {
-                    //add to max heap (based on rate)
-                    neighborRanking.add(n.getValue());
-                    neighborsFound++;
+                    n.getValue().preferred = false;
+                    if(n.getValue().interested)
+                    {
+                        //add to max heap (based on rate)
+                        neighborRanking.add(n.getValue());
+                        neighborsFound++;
+                    }
                 }
-            }
             
 
-            
-            for(int i = 0; i < config.numPreferredNeighbors && i < neighborRanking.size(); i++)
-            {
-                //get the top ranking neighbor
-                neighborRanking.poll().preferred = true;
+                
+                List<Integer> preferredIDs = new ArrayList<Integer>();
+                for(int i = 0; i < config.numPreferredNeighbors && i < neighborRanking.size(); i++)
+                {
+                    //get the top ranking neighbor
+                    preferredIDs.add(neighborRanking.peek().peerID);
+                    neighborRanking.poll().preferred = true;
             }*/
 
             //set preferred neighbors
             ArrayList<Integer> preferredNeighbors = findAllMaxNeighbors();
+            List<Integer> preferredIDs = new ArrayList<Integer>();
             for(int i = 0; i < preferredNeighbors.size(); i++)
             {
                 int peerID = preferredNeighbors.get(i);
                 neighbors.get(peerID).preferred = true;
-            }
-
-            //unchoke all the preferred neighbors
-            for(Map.Entry<Integer, Neighbor> n : neighbors.entrySet())
-            {
-
-                if(n.getValue().connection == null)
-                    continue;
-
-                //unchoke the neighbor
-                if(n.getValue().preferred && n.getValue().choked) 
-                {
-                    n.getValue().sendMessage(new UnchokeMessage());
-                    System.out.println("Unchoke Peer " + n.getKey());
-                    log.logUnchoked(n.getKey());
-                    n.getValue().choked = false;
-                    n.getValue().setStart(System.currentTimeMillis());
-
+                preferredIDs.add(peerID);
                 }
-                //choke the neighbor
-                else if(!n.getValue().preferred && !n.getValue().choked) 
+                log.logPreferredNeighbors(preferredIDs);
+
+                //unchoke all the preferred neighbors
+                for(Map.Entry<Integer, Neighbor> n : neighbors.entrySet())
                 {
-                    n.getValue().sendMessage(new ChokeMessage());
-                    System.out.println("Choke Peer " + n.getKey());
-                    log.logChoked(n.getKey());
-                    n.getValue().choked = true;
-                    n.getValue().setRate(System.currentTimeMillis());
+
+                    if(n.getValue().connection == null)
+                        continue;
+
+                    //unchoke the neighbor
+                    if(n.getValue().preferred && n.getValue().choked) 
+                    {
+                        n.getValue().sendMessage(new UnchokeMessage());
+                        System.out.println("Unchoke Peer " + n.getKey());
+                        log.logUnchoked(n.getKey());
+                        n.getValue().choked = false;
+                        n.getValue().setStart(System.currentTimeMillis());
+
+                    }
+                    //choke the neighbor
+                    else if(!n.getValue().preferred && !n.getValue().choked) 
+                    {
+                        n.getValue().sendMessage(new ChokeMessage());
+                        System.out.println("Choke Peer " + n.getKey());
+                        log.logChoked(n.getKey());
+                        n.getValue().choked = true;
+                        n.getValue().setRate(System.currentTimeMillis());
+                    }
                 }
+
             }
 
             return true;
-
         }
 
         public static ArrayList<Integer> findAllMaxNeighbors()
