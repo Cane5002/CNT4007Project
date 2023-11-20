@@ -131,7 +131,7 @@ public class Neighbor
             return -1;
         
         if(a.getRate() > b.getRate())
-            return -1;
+            return 1;
 
         return 0;
     }

@@ -162,15 +162,32 @@ public class peerProcess {
                 while(true) {
                     Message message =  new Message(readMessage());
                     switch(message.getType()) {
-                        case ChokeMessage.TYPE -> receiveChoke();
-                        case UnchokeMessage.TYPE -> receiveUnchoke();
-                        case InterestedMessage.TYPE -> receiveInterested();
-                        case NotInterestedMessage.TYPE -> receiveNotInterested();
-                        case HaveMessage.TYPE -> receiveHave(message.getPayload());
-                        case BitfieldMessage.TYPE -> receiveBitfield(message.getPayload());
-                        case RequestMessage.TYPE -> receiveRequest(message.getPayload());
-                        case PieceMessage.TYPE -> receivePiece(message.getPayload());
-                        default -> System.out.println("Type unrecognized");
+                        case ChokeMessage.TYPE:
+                            receiveChoke();
+                            break;
+                        case UnchokeMessage.TYPE: 
+                            receiveUnchoke();
+                            break;
+                        case InterestedMessage.TYPE:
+                            receiveInterested();
+                            break;
+                        case NotInterestedMessage.TYPE:
+                            receiveNotInterested();
+                            break;
+                        case HaveMessage.TYPE:
+                            receiveHave(message.getPayload());
+                            break;
+                        case BitfieldMessage.TYPE:
+                            receiveBitfield(message.getPayload());
+                            break;
+                        case RequestMessage.TYPE:
+                            receiveRequest(message.getPayload());
+                            break;
+                        case PieceMessage.TYPE:
+                            receivePiece(message.getPayload());
+                            break;
+                        default:
+                            System.out.println("Type unrecognized");
                     }
                 }
             }
@@ -332,6 +349,9 @@ public class peerProcess {
                 pieceBytes[i] = piece[i+4];
             }
 
+            //update how many chunks they've sent
+            neighbors.get(neighborID).addNumChunks(1);
+            
             file.setPiece(index, pieceBytes);
             System.out.println("Piece of index " + index + " from " + neighborID);
             log.logDownload(neighborID, index, file.getPieceCount());
@@ -347,6 +367,7 @@ public class peerProcess {
 
             //3. send request for a new piece
             if (!file.generateFile()) determineAndSendRequest();
+            else log.logComplete();
         }
 
         // ---- HELPERS -----
@@ -440,7 +461,7 @@ public class peerProcess {
                     preferredNeighbors.add(interestedNeighbors.get(0));
                     interestedNeighbors.remove(0);
                 }
-
+              
                 //unchoke all the preferred neighbors
                 for(int i = 0; i < preferredNeighbors.size(); i++)
                 {
@@ -490,12 +511,14 @@ public class peerProcess {
                 }
 
                 //set preferred neighbors
+                List<Integer> preferredIDs = new ArrayList<Integer>();
                 for(int i = 0; i < config.numPreferredNeighbors && i < neighborRanking.size(); i++)
                 {
-                    //if(neighborRanking.peek().getRate() ==)
                     //get the top ranking neighbor
+                    preferredIDs.add(neighborRanking.peek().peerID);
                     neighborRanking.poll().preferred = true;
                 }
+                log.logPreferredNeighbors(preferredIDs);
 
                 //unchoke all the preferred neighbors
                 for(Map.Entry<Integer, Neighbor> n : neighbors.entrySet())
@@ -504,21 +527,27 @@ public class peerProcess {
                     if(n.getValue().connection == null)
                         continue;
 
+                    //unchoke the neighbor
                     if(n.getValue().preferred && n.getValue().choked) 
                     {
                         n.getValue().sendMessage(new UnchokeMessage());
                         System.out.println("Unchoke Peer " + n.getKey());
                         log.logUnchoked(n.getKey());
                         n.getValue().choked = false;
+                        n.getValue().setStart(System.currentTimeMillis());
+
                     }
+                    //choke the neighbor
                     else if(!n.getValue().preferred && !n.getValue().choked) 
                     {
                         n.getValue().sendMessage(new ChokeMessage());
                         System.out.println("Choke Peer " + n.getKey());
                         log.logChoked(n.getKey());
                         n.getValue().choked = true;
+                        n.getValue().setRate(System.currentTimeMillis());
                     }
                 }
+
             }
 
             return true;
@@ -559,6 +588,7 @@ public class peerProcess {
                 Neighbor neighborToUnchoke = chokedNeighbors.get(randomNum);
                 neighborToUnchoke.sendMessage(new UnchokeMessage());
                 neighborToUnchoke.choked = false;
+                neighborToUnchoke.setStart(System.currentTimeMillis());
                 System.out.println("Optimistically unchoke Peer " + neighborToUnchoke.peerID);
                 log.logOptimisticallyUnchoked(neighborToUnchoke.peerID);
             }
