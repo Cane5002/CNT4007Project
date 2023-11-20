@@ -430,6 +430,7 @@ public class peerProcess {
 
 
             //max heap for the neighbors
+            /* 
             PriorityQueue<Neighbor> neighborRanking = new PriorityQueue<Neighbor>(
                 (int)neighbors.size(), (a,b)->Neighbor.compare(b, a)
             );
@@ -445,12 +446,21 @@ public class peerProcess {
                     neighborsFound++;
                 }
             }
+            
 
-            //set preferred neighbors
+            
             for(int i = 0; i < config.numPreferredNeighbors && i < neighborRanking.size(); i++)
             {
                 //get the top ranking neighbor
                 neighborRanking.poll().preferred = true;
+            }*/
+
+            //set preferred neighbors
+            ArrayList<Integer> preferredNeighbors = findAllMaxNeighbors();
+            for(int i = 0; i < preferredNeighbors.size(); i++)
+            {
+                int peerID = preferredNeighbors.get(i);
+                neighbors.get(peerID).preferred = true;
             }
 
             //unchoke all the preferred neighbors
@@ -485,7 +495,65 @@ public class peerProcess {
 
         }
 
-        
+        public static ArrayList<Integer> findAllMaxNeighbors()
+        {
+            ArrayList<Integer> maximums = new ArrayList<Integer>();
+            
+            //copy the keys into an int array list (gets smaller and smaller in findMaxNeighbor)
+            ArrayList<Integer> copyOfInitKeys = new ArrayList<Integer>(neighbors.keySet());
+
+            //get the appropriate number of preferred neighbors
+            while(maximums.size() < config.numPreferredNeighbors)
+            {
+                int maxNeighborIndex = findMaxNeighbor(copyOfInitKeys);
+                maximums.add(maxNeighborIndex);
+            }
+
+            return maximums;
+        }
+
+        //takes in array list of the current neighbors we're looking for
+            //returns ONE neighbor
+        public static Integer findMaxNeighbor(ArrayList<Integer> toFindMax)
+        {
+            int maxNeighborID = -1;
+            float maxRate = -1;   //rate should never be negative
+
+            ArrayList<Integer> duplicateMax = new ArrayList<Integer>();
+
+            //loop through the neighbors
+            for(int id : toFindMax)
+            {
+                if(neighbors.get(id).getRate() >= maxRate)
+                {
+                    //equal
+                    if(neighbors.get(id).getRate() == maxRate)
+                    {
+                        duplicateMax.add(id);
+                    }
+                    //new maximum rate
+                    else
+                    {
+                        //update values
+                        duplicateMax.clear();
+                        maxRate = neighbors.get(id).getRate();
+                        maxNeighborID = id;
+
+                        //start a new duplicate chain
+                        duplicateMax.add(id);
+                    }
+                }
+            }
+            
+            //choose a random index from the maximum rates
+            int randomNum = ThreadLocalRandom.current().nextInt(0, duplicateMax.size());
+
+            //remove the one we just picked (so it doesn't get picked again)
+            toFindMax.remove(randomNum);
+
+            return duplicateMax.get(randomNum);
+        }
+
     }
 
     public static class OptimisticProtocol extends Thread {
