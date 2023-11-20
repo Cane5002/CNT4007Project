@@ -454,13 +454,18 @@ public class peerProcess {
                         interestedNeighbors.add(n.getValue());
                 
                 ArrayList<Neighbor> preferredNeighbors = new ArrayList<Neighbor>();
+                ArrayList<Integer> preferredIDs = new ArrayList<Integer>();
                 int interestedNeighborSize = interestedNeighbors.size();
                 for(int i = 0; i < config.numPreferredNeighbors && i < interestedNeighborSize; i++)
                 {
                     Collections.shuffle(interestedNeighbors);
+
+                    preferredIDs.add(interestedNeighbors.get(0).peerID);
+                    interestedNeighbors.get(0).preferred = true;
                     preferredNeighbors.add(interestedNeighbors.get(0));
                     interestedNeighbors.remove(0);
                 }
+                log.logPreferredNeighbors(preferredIDs);
               
                 //unchoke all the preferred neighbors
                 for(int i = 0; i < preferredNeighbors.size(); i++)
