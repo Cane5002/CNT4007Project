@@ -58,6 +58,7 @@ public class StartRemotePeers {
 					
 			// get current path
 			String path = System.getProperty("user.dir");
+			System.out.println("Path: " + path);
 			
 			// start clients at remote hosts
 			for (int i = 0; i < myStart.peerInfoVector.size(); i++) {

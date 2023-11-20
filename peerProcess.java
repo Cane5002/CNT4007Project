@@ -160,15 +160,32 @@ public class peerProcess {
                 while(true) {
                     Message message =  new Message(readMessage());
                     switch(message.getType()) {
-                        case ChokeMessage.TYPE -> receiveChoke();
-                        case UnchokeMessage.TYPE -> receiveUnchoke();
-                        case InterestedMessage.TYPE -> receiveInterested();
-                        case NotInterestedMessage.TYPE -> receiveNotInterested();
-                        case HaveMessage.TYPE -> receiveHave(message.getPayload());
-                        case BitfieldMessage.TYPE -> receiveBitfield(message.getPayload());
-                        case RequestMessage.TYPE -> receiveRequest(message.getPayload());
-                        case PieceMessage.TYPE -> receivePiece(message.getPayload());
-                        default -> System.out.println("Type unrecognized");
+                        case ChokeMessage.TYPE:
+                            receiveChoke();
+                            break;
+                        case UnchokeMessage.TYPE: 
+                            receiveUnchoke();
+                            break;
+                        case InterestedMessage.TYPE:
+                            receiveInterested();
+                            break;
+                        case NotInterestedMessage.TYPE:
+                            receiveNotInterested();
+                            break;
+                        case HaveMessage.TYPE:
+                            receiveHave(message.getPayload());
+                            break;
+                        case BitfieldMessage.TYPE:
+                            receiveBitfield(message.getPayload());
+                            break;
+                        case RequestMessage.TYPE:
+                            receiveRequest(message.getPayload());
+                            break;
+                        case PieceMessage.TYPE:
+                            receivePiece(message.getPayload());
+                            break;
+                        default:
+                            System.out.println("Type unrecognized");
                     }
                 }
             }
