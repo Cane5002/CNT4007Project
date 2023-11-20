@@ -475,6 +475,7 @@ public class peerProcess {
                         System.out.println("Unchoke Peer " + curNeighbor.peerID);
                         log.logUnchoked(curNeighbor.peerID);
                         curNeighbor.choked = false;
+                        curNeighbor.setRate(System.currentTimeMillis());
                     }
                     else if(!curNeighbor.preferred && !curNeighbor.choked) 
                     {
@@ -482,6 +483,7 @@ public class peerProcess {
                         System.out.println("Choke Peer " + curNeighbor.peerID);
                         log.logChoked(curNeighbor.peerID);
                         curNeighbor.choked = true;
+                        curNeighbor.setRate(System.currentTimeMillis());
                     }
                 }
             }
