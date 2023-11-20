@@ -437,9 +437,7 @@ public class peerProcess {
             }
         }
 
-        //TODO:may have to not use priority queue to ensure random selection when equal
-            //could use randomized order? 
-            //returns success or fail
+        //returns success or fail
         public static boolean searchForNeighbors() throws IOException
         {
             if(neighbors.size() < 1) 
@@ -499,43 +497,14 @@ public class peerProcess {
                 //find numPreferredNeighbors # of interested neighbors
                 int neighborsFound = 0;
 
-
-            //max heap for the neighbors
-            /* 
-            PriorityQueue<Neighbor> neighborRanking = new PriorityQueue<Neighbor>(
-                (int)neighbors.size(), (a,b)->Neighbor.compare(b, a)
-            );
-
-                //loop through all the neighbors
-                for(Map.Entry<Integer, Neighbor> n : neighbors.entrySet())
-                {
-                    n.getValue().preferred = false;
-                    if(n.getValue().interested)
-                    {
-                        //add to max heap (based on rate)
-                        neighborRanking.add(n.getValue());
-                        neighborsFound++;
-                    }
-                }
-            
-
-                
+                //set preferred neighbors
+                ArrayList<Integer> preferredNeighbors = findAllMaxNeighbors();
                 List<Integer> preferredIDs = new ArrayList<Integer>();
-                for(int i = 0; i < config.numPreferredNeighbors && i < neighborRanking.size(); i++)
+                for(int i = 0; i < preferredNeighbors.size(); i++)
                 {
-                    //get the top ranking neighbor
-                    preferredIDs.add(neighborRanking.peek().peerID);
-                    neighborRanking.poll().preferred = true;
-            }*/
-
-            //set preferred neighbors
-            ArrayList<Integer> preferredNeighbors = findAllMaxNeighbors();
-            List<Integer> preferredIDs = new ArrayList<Integer>();
-            for(int i = 0; i < preferredNeighbors.size(); i++)
-            {
-                int peerID = preferredNeighbors.get(i);
-                neighbors.get(peerID).preferred = true;
-                preferredIDs.add(peerID);
+                    int peerID = preferredNeighbors.get(i);
+                    neighbors.get(peerID).preferred = true;
+                    preferredIDs.add(peerID);
                 }
                 log.logPreferredNeighbors(preferredIDs);
 
