@@ -57,7 +57,8 @@ public class Neighbor
     public peerProcess.Connection conn;
     public Bitfield bitfield;
     public boolean choked;
-    public Neighbor(peerProcess.Connection conn_, int bitfieldLength) {
+    public int peerID;
+    public Neighbor(peerProcess.Connection conn_, int bitfieldLength, int peerID_) {
         conn = conn_;
         bitfield = new Bitfield(bitfieldLength);
         chunksSent = 0;
@@ -66,6 +67,7 @@ public class Neighbor
         choked = true;
         rate = -1;
         peer = null;
+        peerID = peerID_;
     }
     public void initBitfield(byte[] bytes) {
         bitfield = new Bitfield(bytes);
@@ -73,7 +75,7 @@ public class Neighbor
     public void updateBitfield(int index) {
         bitfield.setPiece(index);
     }
-    public void sendMessage(TCPMessage message) throws IOException {
+    public void sendMessage(TCPMessage message) {
         conn.sendMessage(message);
     }
 

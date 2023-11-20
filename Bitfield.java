@@ -38,6 +38,7 @@ public class Bitfield {
             byte missing = (byte) (other[i] & ~(bitfield[i]));
             if (missing == 0) continue;
             for (int j = 0; j < 8; j++) {
+                if (i*8+j >= length) break;
                 if ((missing & (128>>j)) != 0) pieces.add(i*8+j);
             }
         }
