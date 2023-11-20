@@ -1,4 +1,5 @@
 import java.time.LocalDateTime;
+import java.util.List;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -32,6 +33,16 @@ public class Logger {
     }
 
     public void logPreferredNeighbors(int... peerIDs) {
+        StringBuilder msg = new StringBuilder(String.format("Peer %d has the preferred neighbors ", peerID));
+        String delim = "";
+        for (int id : peerIDs) {
+            msg.append(delim).append(id);
+            delim = ", ";
+        }
+        log(msg.toString());
+    }
+
+    public void logPreferredNeighbors(List<Integer> peerIDs) {
         StringBuilder msg = new StringBuilder(String.format("Peer %d has the preferred neighbors ", peerID));
         String delim = "";
         for (int id : peerIDs) {
