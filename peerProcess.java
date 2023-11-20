@@ -365,6 +365,7 @@ public class peerProcess {
 
             //3. send request for a new piece
             if (!file.generateFile()) determineAndSendRequest();
+            else log.logComplete();
         }
 
         // ---- HELPERS -----
@@ -464,11 +465,14 @@ public class peerProcess {
             }
 
             //set preferred neighbors
+            List<Integer> preferredIDs = new ArrayList<Integer>();
             for(int i = 0; i < config.numPreferredNeighbors && i < neighborRanking.size(); i++)
             {
                 //get the top ranking neighbor
+                preferredIDs.add(neighborRanking.peek().peerID);
                 neighborRanking.poll().preferred = true;
             }
+            log.logPreferredNeighbors(preferredIDs);
 
             //unchoke all the preferred neighbors
             for(Map.Entry<Integer, Neighbor> n : neighbors.entrySet())
