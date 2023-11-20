@@ -330,6 +330,9 @@ public class peerProcess {
                 pieceBytes[i] = piece[i+4];
             }
 
+            //update how many chunks they've sent
+            neighbors.get(neighborID).addNumChunks(1);
+            
             file.setPiece(index, pieceBytes);
             System.out.println("Piece of index " + index + " from " + neighborID);
             log.logDownload(neighborID, index, file.getPieceCount());
@@ -457,19 +460,24 @@ public class peerProcess {
                 if(n.getValue().connection == null)
                     continue;
 
+                //unchoke the neighbor
                 if(n.getValue().preferred && n.getValue().choked) 
                 {
                     n.getValue().sendMessage(new UnchokeMessage());
                     System.out.println("Unchoke Peer " + n.getKey());
                     log.logUnchoked(n.getKey());
                     n.getValue().choked = false;
+                    n.getValue().setStart(System.currentTimeMillis());
+
                 }
+                //choke the neighbor
                 else if(!n.getValue().preferred && !n.getValue().choked) 
                 {
                     n.getValue().sendMessage(new ChokeMessage());
                     System.out.println("Choke Peer " + n.getKey());
                     log.logChoked(n.getKey());
                     n.getValue().choked = true;
+                    n.getValue().setRate(System.currentTimeMillis());
                 }
             }
 
@@ -514,6 +522,7 @@ public class peerProcess {
                 Neighbor neighborToUnchoke = chokedNeighbors.get(randomNum);
                 neighborToUnchoke.sendMessage(new UnchokeMessage());
                 neighborToUnchoke.choked = false;
+                neighborToUnchoke.setStart(System.currentTimeMillis());
                 System.out.println("Optimistically unchoke Peer " + neighborToUnchoke.peerID);
                 log.logOptimisticallyUnchoked(neighborToUnchoke.peerID);
             }
