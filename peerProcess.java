@@ -195,7 +195,7 @@ public class peerProcess {
                 System.err.println("Class not found");
             }
 			catch(IOException e){
-				e.printStackTrace();
+				System.out.println("Peer " + neighborID + " Connection closed");
 			}
             catch(Exception e) {
                 e.printStackTrace();
