@@ -520,6 +520,8 @@ public class peerProcess {
                 for(int i = 0; i < preferredNeighbors.size(); i++)
                 {
                     int peerID = preferredNeighbors.get(i);
+                    if(!neighbors.get(peerID).interested)
+                        break;
                     neighbors.get(peerID).preferred = true;
                     preferredIDs.add(peerID);
                 }
