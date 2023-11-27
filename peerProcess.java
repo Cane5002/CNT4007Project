@@ -145,38 +145,44 @@ public class peerProcess {
                 neighbors.put(neighborID, new Neighbor(this, file.getMaxPieceCount(), neighborID));
 
                 // Listen for messages
-                while(running) {
-                    byte[] bytes = readMessage();
-                    if (bytes==null) continue;
-                    Message message =  new Message(bytes);
-                    switch(message.getType()) {
-                        case ChokeMessage.TYPE:
-                            receiveChoke();
-                            break;
-                        case UnchokeMessage.TYPE: 
-                            receiveUnchoke();
-                            break;
-                        case InterestedMessage.TYPE:
-                            receiveInterested();
-                            break;
-                        case NotInterestedMessage.TYPE:
-                            receiveNotInterested();
-                            break;
-                        case HaveMessage.TYPE:
-                            receiveHave(message.getPayload());
-                            break;
-                        case BitfieldMessage.TYPE:
-                            receiveBitfield(message.getPayload());
-                            break;
-                        case RequestMessage.TYPE:
-                            receiveRequest(message.getPayload());
-                            break;
-                        case PieceMessage.TYPE:
-                            receivePiece(message.getPayload());
-                            break;
-                        default:
-                            System.out.println("Type unrecognized");
+                try {
+                    while(running) {
+                        Message message =  new Message(readMessage());
+                        switch(message.getType()) {
+                            case ChokeMessage.TYPE:
+                                receiveChoke();
+                                break;
+                            case UnchokeMessage.TYPE: 
+                                receiveUnchoke();
+                                break;
+                            case InterestedMessage.TYPE:
+                                receiveInterested();
+                                break;
+                            case NotInterestedMessage.TYPE:
+                                receiveNotInterested();
+                                break;
+                            case HaveMessage.TYPE:
+                                receiveHave(message.getPayload());
+                                break;
+                            case BitfieldMessage.TYPE:
+                                receiveBitfield(message.getPayload());
+                                break;
+                            case RequestMessage.TYPE:
+                                receiveRequest(message.getPayload());
+                                break;
+                            case PieceMessage.TYPE:
+                                receivePiece(message.getPayload());
+                                break;
+                            default:
+                                System.out.println("Type unrecognized");
+                        }
                     }
+                }
+                catch ( ClassNotFoundException e ) {
+                    System.err.println("Class not found");
+                }
+                catch(IOException e){
+                    System.out.println("READ FAILED - PEER " +  neighborID + " SOCKET CLOSED");
                 }
             }
             catch ( ClassNotFoundException e ) {
@@ -186,7 +192,7 @@ public class peerProcess {
 				e.printStackTrace();
 			}
             catch(Exception e) {
-                e.printStackTrace();
+                System.out.println(e);
             }
             finally{
                 //Close connections
@@ -216,18 +222,9 @@ public class peerProcess {
             }
         }
 
-        byte[] readMessage()  {
-            if (!running) return null;
-            try {
-                return (byte[])in.readObject();
-            } 
-            catch ( ClassNotFoundException e ) {
-                System.err.println("Class not found");
-            }
-			catch(IOException e){
-                System.out.println("READ FAILED - PEER " +  neighborID + " SOCKET CLOSED");
-			}
-            return null;
+        byte[] readMessage() throws IOException, ClassNotFoundException {
+            if (!running) throw new IOException();
+            return (byte[])in.readObject();
         }
 
         // ---------------- MESSAGE HANDLERS ----------------
