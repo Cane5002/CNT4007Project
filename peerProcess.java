@@ -417,6 +417,8 @@ public class peerProcess {
             {
                 if(currentlyRequesting.size() > 0)
                     currentlyRequesting.clear();
+                interested = false;
+                sendMessage(new NotInterestedMessage());
                 return false;
             }
 
@@ -461,8 +463,10 @@ public class peerProcess {
                 for(Map.Entry<Integer, Neighbor> n : neighbors.entrySet()) {
                     if(n.getValue().interested) {}
                         interestedNeighbors.add(n.getValue());
-                    if(!n.getValue().bitfield.hasAllPieces()) 
+                    if(!n.getValue().bitfield.hasAllPieces()) {
                         allNeighborsHaveFile = false;
+                        System.out.println("Peer " + n.getKey() + " still needs pieces");
+                    }
                 }
                 if (allNeighborsHaveFile) {
                     System.out.println("TERMINATING PROGRAM");
