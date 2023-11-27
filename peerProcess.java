@@ -195,7 +195,7 @@ public class peerProcess {
                 System.err.println("Class not found");
             }
 			catch(IOException e){
-				e.printStackTrace();
+				System.out.println("Peer " + neighborID + " Connection closed");
 			}
             catch(Exception e) {
                 e.printStackTrace();
@@ -217,6 +217,7 @@ public class peerProcess {
             //stream write the message
             try
             {
+                if (!running) return;
                 out.writeObject(msg.toBytes());
                 out.flush();
             }
@@ -308,7 +309,7 @@ public class peerProcess {
             // ---------- REQUEST ------------
         public void receiveRequest(byte[] payload)
         {
-            System.out.println("Received request from " + neighborID);
+            // System.out.println("Received request from " + neighborID);
             Neighbor from = neighbors.get(neighborID);
             //sending a piece
             if(!from.choked)
@@ -332,7 +333,7 @@ public class peerProcess {
                 }
 
                 sendMessage(new PieceMessage(pieceToSend));
-                System.out.println("Sent piece " + pieceIndex + " to " + neighborID); 
+                // System.out.println("Sent piece " + pieceIndex + " to " + neighborID); 
             }
         }
 
@@ -353,7 +354,7 @@ public class peerProcess {
             neighbors.get(neighborID).addNumChunks(1);
             
             file.setPiece(index, pieceBytes);
-            System.out.println("Piece of index " + index + " from " + neighborID);
+            // System.out.println("Piece of index " + index + " from " + neighborID);
             log.logDownload(neighborID, index, file.getPieceCount());
 
             if(currentlyRequesting.containsKey(index))
@@ -454,10 +455,11 @@ public class peerProcess {
                 for(Map.Entry<Integer, Neighbor> n : neighbors.entrySet()) {
                     if(n.getValue().interested) {}
                         interestedNeighbors.add(n.getValue());
-                    if(!n.getValue().bitfield.hasAllPieces())
+                    if(!n.getValue().bitfield.hasAllPieces()) 
                         allNeighborsHaveFile = false;
                 }
                 if (allNeighborsHaveFile) {
+                    System.out.println("TERMINATING PROGRAM");
                     running = false;
                     return false;
                 }
