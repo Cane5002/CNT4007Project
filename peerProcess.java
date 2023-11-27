@@ -84,9 +84,11 @@ public class peerProcess {
         
         boolean client;
         int neighborID;
+        boolean interested;
 
         public Connection(String host, int port, int neighborID_) {
             client = true;
+            interested = false;
             neighborID = neighborID_;
             try {
                 connection = new Socket(host, port);
@@ -105,6 +107,7 @@ public class peerProcess {
 
         public Connection(Socket connection_) {
             client = false;
+            interested = false;
             connection = connection_;
             System.out.println(String.format("Peer %d has connected",neighborID));
         }
@@ -279,11 +282,19 @@ public class peerProcess {
             
             // check if we have the same piece
             // if yes -> not interested
-            if (file.hasPiece(pieceIndex)) 
-                sendMessage(new NotInterestedMessage());
+            if(file.bitfield.getInterestedPieces(neighbors.get(neighborID).bitfield).isEmpty()) {
+                if (interested) {
+                    interested = false;
+                    sendMessage(new NotInterestedMessage());
+                }
+            }
             // if not -> interested
-            else 
-                sendMessage(new InterestedMessage());
+            else   {
+                if (!interested) {
+                    interested = true;
+                    sendMessage(new InterestedMessage());
+                }
+            }
         }
         
             // --------- BITFIELD ------------
@@ -293,11 +304,15 @@ public class peerProcess {
 
             // check if this peer has the pieces the sender has
             // if sender has something this peer does not, we send an interested message
-            if(!file.bitfield.getInterestedPieces(bitfield).isEmpty()) 
+            if(!file.bitfield.getInterestedPieces(bitfield).isEmpty())  {
+                interested = true;
                 sendMessage(new InterestedMessage());
+            }
             // send not interested
-            else
+            else {
+                interested = false;
                 sendMessage(new NotInterestedMessage());
+            }
         }
         
             // ---------- REQUEST ------------
