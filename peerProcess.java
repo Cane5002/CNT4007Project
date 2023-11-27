@@ -195,6 +195,7 @@ public class peerProcess {
                 System.err.println("Class not found");
             }
 			catch(IOException e){
+                e.printStackTrace();
 				System.out.println("Peer " + neighborID + " Connection closed");
 			}
             catch(Exception e) {
@@ -206,6 +207,7 @@ public class peerProcess {
                     in.close();
                     out.close();
                     connection.close();
+                    System.out.println("CLOSING CONNECTION WITH " + neighborID);
                 }
                 catch(IOException ioException){
                     ioException.printStackTrace();
@@ -261,7 +263,7 @@ public class peerProcess {
             // ------- INTERESTED --------
         public void receiveInterested() 
         {
-            System.out.println("Interested message from Peer" + neighborID);
+            // System.out.println("Interested message from Peer" + neighborID);
             neighbors.get(neighborID).interested = true;
             log.logInterested(neighborID);
         }
@@ -269,7 +271,7 @@ public class peerProcess {
             // -------- NOT INTERESTED ---------
         public void receiveNotInterested() 
         {
-            System.out.println("Not Interested message from Peer" + neighborID);
+            // System.out.println("Not Interested message from Peer" + neighborID);
             neighbors.get(neighborID).interested = false;
             log.logNotInterested(neighborID);
         }
@@ -402,7 +404,7 @@ public class peerProcess {
                 //sending request message
                 sendMessage(new RequestMessage(interestedPieces.get(randIndex)));
                 currentlyRequesting.put(randIndex, from);
-                System.out.println("Sent request to " + neighborID + " for piece " + interestedPieces.get(randIndex));
+                // System.out.println("Sent request to " + neighborID + " for piece " + interestedPieces.get(randIndex));
                 return true;
 
             }

@@ -24,6 +24,7 @@ public class TorrentFile {
     // Array of pieces | each piece is a byte array
     Piece pieces[];
     Bitfield bitfield;
+    boolean fileComplete;
 
     public TorrentFile(String fileName, int fileSize_, int pieceSize_) {
         file = new File(fileName);
@@ -33,6 +34,7 @@ public class TorrentFile {
         currentPieceCnt = 0;
         pieces = new Piece[pieceCnt];
         bitfield = new Bitfield(pieceCnt);
+        fileComplete = false;
     }
     
     public byte[] getPiece(int index) {
@@ -105,11 +107,13 @@ public class TorrentFile {
         }
         bitfield.setAllPieces();
         currentPieceCnt = pieceCnt; //we have all the pieces
+        fileComplete = true;
     }
 
     // Consolidate pieces and generate complete file / return success
     public boolean generateFile() {
         if (!hasFile()) return false;
+        if (fileComplete) return true;
         System.out.println("Generating file...");
         try {
             file.createNewFile();
@@ -121,6 +125,7 @@ public class TorrentFile {
             for (int i = 0; i < pieceCnt; i++) {
                 data.write(pieces[i].bytes);
             }
+            fileComplete = true;
             return true;
         } catch (IOException e) {
                 System.out.println(e);
