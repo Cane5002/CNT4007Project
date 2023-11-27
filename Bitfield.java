@@ -19,6 +19,13 @@ public class Bitfield {
         return ((bitfield[index/8] & (128>>(index%8))) != 0);
     }
 
+    public boolean hasAllPieces() {
+        for (int i = 0; i < length; i++)  {
+            if (!hasPiece(i)) return false;
+        }
+        return true;
+    }
+
     public void setPiece(int index) {
         bitfield[index/8] |= (128>>(index%8));
     }
