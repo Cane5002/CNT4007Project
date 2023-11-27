@@ -563,7 +563,8 @@ public class peerProcess {
             while(maximums.size() < config.numPreferredNeighbors)
             {
                 int maxNeighborIndex = findMaxNeighbor(copyOfInitKeys);
-                maximums.add(maxNeighborIndex);
+                if(maxNeighborIndex != -1)
+                    maximums.add(maxNeighborIndex);
             }
 
             return maximums;
@@ -603,12 +604,17 @@ public class peerProcess {
             }
             
             //choose a random index from the maximum rates
-            int randomNum = ThreadLocalRandom.current().nextInt(0, duplicateMax.size());
+            if(duplicateMax.size() > 0)
+            {
+                int randomNum = ThreadLocalRandom.current().nextInt(0, duplicateMax.size());
 
-            //remove the one we just picked (so it doesn't get picked again)
-            toFindMax.remove(randomNum);
+                //remove the one we just picked (so it doesn't get picked again)
+                toFindMax.remove(randomNum);
+                return duplicateMax.get(randomNum);
 
-            return duplicateMax.get(randomNum);
+            }
+
+            return -1;
         }
 
     }
