@@ -59,10 +59,12 @@ public class TorrentFile {
         return returnBytes;
     }
 
-    public void setPiece(int index, byte[] bytes) {
+    public boolean setPiece(int index, byte[] bytes) {
+        if(hasPiece(index)) return false;
         pieces[index] = new Piece(bytes);
         bitfield.setPiece(index);
         ++currentPieceCnt;
+        return true;
     }
 
     public boolean hasPiece(int index) {

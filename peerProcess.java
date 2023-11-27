@@ -352,21 +352,23 @@ public class peerProcess {
                 pieceBytes[i] = piece[i+4];
             }
 
-            //update how many chunks they've sent
-            neighbors.get(neighborID).addNumChunks(1);
             
-            file.setPiece(index, pieceBytes);
-            // System.out.println("Piece of index " + index + " from " + neighborID);
-            log.logDownload(neighborID, index, file.getPieceCount());
+            if (file.setPiece(index, pieceBytes)) {
+                //update how many chunks they've sent
+                neighbors.get(neighborID).addNumChunks(1);
+
+                // System.out.println("Piece of index " + index + " from " + neighborID);
+                log.logDownload(neighborID, index, file.getPieceCount());
+
+                for (Map.Entry<Integer,Neighbor> n : neighbors.entrySet()) {
+                    if (n.getKey() == neighborID ) continue;
+                    n.getValue().sendMessage(new HaveMessage(index));
+                }
+            }
 
             if(currentlyRequesting.containsKey(index))
                 currentlyRequesting.remove(index); //for use in determineAndSetRequest
 
-            
-            for (Map.Entry<Integer,Neighbor> n : neighbors.entrySet()) {
-                if (n.getKey() == neighborID ) continue;
-                n.getValue().sendMessage(new HaveMessage(index));
-            }
 
             //3. send request for a new piece
             if (!file.generateFile()) determineAndSendRequest();
