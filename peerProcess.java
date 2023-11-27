@@ -76,23 +76,6 @@ public class peerProcess {
         }
     }
 
-    public static class ServerListener extends Thread 
-    {
-        public void run()
-        {
-            try(ServerSocket server = new ServerSocket(config.getPeer(peerID).portNumber)) {
-                while(running) {
-                    Connection connection = new Connection(server.accept());
-                    connection.start();
-                    connections.add(connection);
-                }
-            }
-            catch(IOException ioException){
-                ioException.printStackTrace();
-            }
-        }
-    }
-
     // REFERENCE: Client.java
     public static class Connection extends Thread {
         private Socket connection;           //socket connect to the server
@@ -160,7 +143,9 @@ public class peerProcess {
 
                 // Listen for messages
                 while(running) {
-                    Message message =  new Message(readMessage());
+                    byte[] bytes = readMessage();
+                    if (bytes==null) continue;
+                    Message message =  new Message(bytes);
                     switch(message.getType()) {
                         case ChokeMessage.TYPE:
                             receiveChoke();
@@ -196,7 +181,7 @@ public class peerProcess {
             }
 			catch(IOException e){
                 e.printStackTrace();
-				System.out.println("Peer " + neighborID + " Connection closed");
+				System.out.println("Peer " + neighborID + " Connection was closed");
 			}
             catch(Exception e) {
                 e.printStackTrace();
@@ -229,12 +214,19 @@ public class peerProcess {
             }
         }
 
-        byte[] readMessage() throws IOException,ClassNotFoundException {
-            return (byte[])in.readObject();
-        }
-        public ObjectOutputStream getOutput()
-        {
-            return out;
+        byte[] readMessage()  {
+            if (!running) return null;
+            try {
+                return (byte[])in.readObject();
+            } 
+            catch ( ClassNotFoundException e ) {
+                System.err.println("Class not found");
+            }
+			catch(IOException e){
+                e.printStackTrace();
+				System.out.println("Peer " + neighborID + " Connection was closed");
+			}
+            return null;
         }
 
         // ---------------- MESSAGE HANDLERS ----------------
