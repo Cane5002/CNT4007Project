@@ -183,8 +183,7 @@ public class peerProcess {
                 System.err.println("Class not found");
             }
 			catch(IOException e){
-                e.printStackTrace();
-				System.out.println("Peer " + neighborID + " Connection was closed");
+				e.printStackTrace();
 			}
             catch(Exception e) {
                 e.printStackTrace();
@@ -226,8 +225,7 @@ public class peerProcess {
                 System.err.println("Class not found");
             }
 			catch(IOException e){
-                e.printStackTrace();
-				System.out.println("Peer " + neighborID + " Connection was closed");
+                System.out.println("READ FAILED - PEER " +  neighborID + " SOCKET CLOSED");
 			}
             return null;
         }
@@ -272,7 +270,7 @@ public class peerProcess {
         }
 
             // --------- HAVE -----------
-        public void receiveHave(byte[] payload) throws IOException
+        public void receiveHave(byte[] payload)
         {
             int pieceIndex = ByteBuffer.wrap(payload).getInt();
             log.logHave(neighborID, pieceIndex);
@@ -298,7 +296,7 @@ public class peerProcess {
         }
         
             // --------- BITFIELD ------------
-        public void receiveBitfield(byte[] bitfield) throws IOException
+        public void receiveBitfield(byte[] bitfield)
         {
             neighbors.get(neighborID).initBitfield(bitfield);
 

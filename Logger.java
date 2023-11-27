@@ -8,6 +8,7 @@ import java.io.IOException;
 public class Logger {
     File logFile;
     int peerID;
+    boolean logComplete = false;
 
     public Logger(int _peerID) {
         peerID = _peerID;
@@ -81,6 +82,8 @@ public class Logger {
     }
 
     public void logComplete() {
+        if (logComplete) return;
         log(String.format("Peer %d has downloaded the complete file", peerID));
+        logComplete = true;
     }
 }
