@@ -455,10 +455,11 @@ public class peerProcess {
                 for(Map.Entry<Integer, Neighbor> n : neighbors.entrySet()) {
                     if(n.getValue().interested) {}
                         interestedNeighbors.add(n.getValue());
-                    if(!n.getValue().bitfield.hasAllPieces())
+                    if(!n.getValue().bitfield.hasAllPieces()) 
                         allNeighborsHaveFile = false;
                 }
                 if (allNeighborsHaveFile) {
+                    System.out.println("TERMINATING PROGRAM");
                     running = false;
                     return false;
                 }
