@@ -25,7 +25,7 @@ public class peerProcess {
     static ArrayList<Connection> connections = new ArrayList<Connection>();
 
     static Logger log;
-
+    static boolean running = true;
 
     public static void main (String[] args) {
         // ------------- SETUP ---------------
@@ -67,7 +67,7 @@ public class peerProcess {
         // ------------- SERVER ------------
         // Listen for future peer connections
         try(ServerSocket server = new ServerSocket(config.getPeer(peerID).portNumber)) {
-            while(true) {
+            while(running) {
                 new Connection(server.accept()).start();
             }
         }
@@ -81,7 +81,7 @@ public class peerProcess {
         public void run()
         {
             try(ServerSocket server = new ServerSocket(config.getPeer(peerID).portNumber)) {
-                while(true) {
+                while(running) {
                     Connection connection = new Connection(server.accept());
                     connection.start();
                     connections.add(connection);
@@ -159,7 +159,7 @@ public class peerProcess {
                 neighbors.put(neighborID, new Neighbor(this, file.getMaxPieceCount(), neighborID));
 
                 // Listen for messages
-                while(true) {
+                while(running) {
                     Message message =  new Message(readMessage());
                     switch(message.getType()) {
                         case ChokeMessage.TYPE:
@@ -423,8 +423,11 @@ public class peerProcess {
             // Manage Choked/Unchoked Neighbors
             try
             {
-                Thread.sleep(config.unchokingInterval*1000);
-                searchForNeighbors();
+                while(running)
+                {
+                    Thread.sleep(config.unchokingInterval*1000);
+                    searchForNeighbors();
+                }
 
             }
             catch(InterruptedException e)
@@ -607,8 +610,11 @@ public class peerProcess {
             // Manage Optimisticallly Unchoked Neighbors
             try
             {
-                Thread.sleep(config.optUnchokingInterval*1000);
-                optimisticallyUnchoke();
+                while(running)
+                {
+                    Thread.sleep(config.optUnchokingInterval*1000);
+                    optimisticallyUnchoke();
+                }
             }
             catch(InterruptedException e)
             {
