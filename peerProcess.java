@@ -450,9 +450,17 @@ public class peerProcess {
             if(file.hasFile())
             {
                 ArrayList<Neighbor> interestedNeighbors = new ArrayList<Neighbor>();
-                for(Map.Entry<Integer, Neighbor> n : neighbors.entrySet())
-                    if(n.getValue().interested)
+                boolean allNeighborsHaveFile = true;
+                for(Map.Entry<Integer, Neighbor> n : neighbors.entrySet()) {
+                    if(n.getValue().interested) {}
                         interestedNeighbors.add(n.getValue());
+                    if(!n.getValue().bitfield.hasAllPieces())
+                        allNeighborsHaveFile = false;
+                }
+                if (allNeighborsHaveFile) {
+                    running = false;
+                    return false;
+                }
                 
                 ArrayList<Neighbor> preferredNeighbors = new ArrayList<Neighbor>();
                 ArrayList<Integer> preferredIDs = new ArrayList<Integer>();
