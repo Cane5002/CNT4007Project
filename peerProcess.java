@@ -383,6 +383,7 @@ public class peerProcess {
 
             // ---------- TERMINATE -----------
         public void receiveTerminate() {
+            System.out.println("TERMINATE MESSAGE RECEIVED FROM " + neighborID);
             running = false;
         }
         // ---- HELPERS -----
