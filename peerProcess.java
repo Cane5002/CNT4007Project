@@ -395,8 +395,7 @@ public class peerProcess {
             // ---------- TERMINATE -----------
         public void receiveTerminate() {
             System.out.println("TERMINATE MESSAGE RECEIVED FROM " + neighborID);
-            running = false;
-            try { server.close(); } catch (IOException e) {e.printStackTrace();};
+            terminate();
         }
         // ---- HELPERS -----
         public boolean determineAndSendRequest()
@@ -493,11 +492,7 @@ public class peerProcess {
                 }
                 if (allNeighborsHaveFile) {
                     System.out.println("TERMINATING PROGRAM");
-                    for(Map.Entry<Integer, Neighbor> n : neighbors.entrySet()) {
-                        n.getValue().sendMessage(new TerminateMessage());
-                    }
-                    running = false;
-                    try { server.close(); } catch (IOException e) {e.printStackTrace();};
+                    terminate();
                     return false;
                 }
                 
@@ -706,4 +701,16 @@ public class peerProcess {
         }
     }
 
+    // ---- Helpers -----
+    public static void terminate() {
+        for(Map.Entry<Integer, Neighbor> n : neighbors.entrySet()) {
+            n.getValue().sendMessage(new TerminateMessage());
+        }
+        running = false;
+        try { 
+            server.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        };
+    }
 }
