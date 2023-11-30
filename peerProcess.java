@@ -396,6 +396,7 @@ public class peerProcess {
         public void receiveTerminate() {
             System.out.println("TERMINATE MESSAGE RECEIVED FROM " + neighborID);
             running = false;
+            try { server.close(); } catch (IOException e) {e.printStackTrace();};
         }
         // ---- HELPERS -----
         public boolean determineAndSendRequest()
