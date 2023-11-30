@@ -147,4 +147,10 @@ class PieceMessage extends Message {
         super(payload.length+1, TYPE, payload);
     }
 }
+class TerminateMessage extends Message {
+    public static final byte TYPE = 8;
+    TerminateMessage() {
+        super(1, TYPE, new byte[0]);
+    }
+}
 

@@ -173,6 +173,9 @@ public class peerProcess {
                             case PieceMessage.TYPE:
                                 receivePiece(message.getPayload());
                                 break;
+                            case TerminateMessage.TYPE:
+                                receiveTerminate();
+                                break;
                             default:
                                 System.out.println("Type unrecognized");
                         }
@@ -201,6 +204,7 @@ public class peerProcess {
                     out.close();
                     connection.close();
                     System.out.println("CLOSING CONNECTION WITH " + neighborID);
+                    neighbors.remove(neighborID);
                 }
                 catch(IOException ioException){
                     ioException.printStackTrace();
@@ -377,6 +381,10 @@ public class peerProcess {
             else log.logComplete();
         }
 
+            // ---------- TERMINATE -----------
+        public void receiveTerminate() {
+            running = false;
+        }
         // ---- HELPERS -----
         public boolean determineAndSendRequest()
         {
@@ -461,7 +469,7 @@ public class peerProcess {
                 ArrayList<Neighbor> interestedNeighbors = new ArrayList<Neighbor>();
                 boolean allNeighborsHaveFile = true;
                 for(Map.Entry<Integer, Neighbor> n : neighbors.entrySet()) {
-                    if(n.getValue().interested) {}
+                    if(n.getValue().interested)
                         interestedNeighbors.add(n.getValue());
                     if(!n.getValue().bitfield.hasAllPieces()) {
                         allNeighborsHaveFile = false;
@@ -471,6 +479,9 @@ public class peerProcess {
                 if (allNeighborsHaveFile) {
                     System.out.println("TERMINATING PROGRAM");
                     running = false;
+                    for(Map.Entry<Integer, Neighbor> n : neighbors.entrySet()) {
+                        if (n.getKey()!=peerID) n.getValue().sendMessage(new TerminateMessage());
+                    }
                     return false;
                 }
                 
