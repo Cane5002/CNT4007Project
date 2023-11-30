@@ -55,4 +55,9 @@ public class Bitfield {
     public List<Integer> getInterestedPieces(Bitfield other) {
         return getInterestedPieces(other.getBytes());
     }
+
+    public void print() {
+        for (int i =0; i < length; i++) System.out.print((hasPiece(i)) ? "1" : "0");
+        System.out.println();
+    }
 }

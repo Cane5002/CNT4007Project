@@ -74,6 +74,8 @@ public class peerProcess {
         catch(IOException ioException){
             ioException.printStackTrace();
         }
+
+        System.out.println("MAIN COMPLETED....EXITING");
     }
 
     // REFERENCE: Client.java
@@ -278,6 +280,7 @@ public class peerProcess {
 
             // Update neighbor bitfield
             neighbors.get(neighborID).updateBitfield(pieceIndex);
+            // neighbors.get(neighborID).bitfield.print();
             
             // check if we have the same piece
             // if yes -> not interested
@@ -367,7 +370,6 @@ public class peerProcess {
                 log.logDownload(neighborID, index, file.getPieceCount());
 
                 for (Map.Entry<Integer,Neighbor> n : neighbors.entrySet()) {
-                    if (n.getKey() == neighborID ) continue;
                     n.getValue().sendMessage(new HaveMessage(index));
                 }
             }
@@ -456,6 +458,8 @@ public class peerProcess {
             {
                 e.printStackTrace();
             }
+
+            System.out.println("PREFERRED PROTOCOL CLOSING");
         }
 
         //returns success or fail
@@ -480,7 +484,7 @@ public class peerProcess {
                 if (allNeighborsHaveFile) {
                     System.out.println("TERMINATING PROGRAM");
                     for(Map.Entry<Integer, Neighbor> n : neighbors.entrySet()) {
-                        if (n.getKey()!=peerID) n.getValue().sendMessage(new TerminateMessage());
+                        n.getValue().sendMessage(new TerminateMessage());
                     }
                     running = false;
                     return false;
@@ -664,6 +668,8 @@ public class peerProcess {
             {
                 e.printStackTrace();
             }
+
+            System.out.println("OPTIMISTIC PROTOCOL CLOSING");
         }
 
         public void optimisticallyUnchoke() throws IOException
