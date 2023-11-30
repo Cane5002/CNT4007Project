@@ -479,10 +479,10 @@ public class peerProcess {
                 }
                 if (allNeighborsHaveFile) {
                     System.out.println("TERMINATING PROGRAM");
-                    running = false;
                     for(Map.Entry<Integer, Neighbor> n : neighbors.entrySet()) {
                         if (n.getKey()!=peerID) n.getValue().sendMessage(new TerminateMessage());
                     }
+                    running = false;
                     return false;
                 }
                 
