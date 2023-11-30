@@ -487,8 +487,8 @@ public class peerProcess {
         //returns success or fail
         public static boolean searchForNeighbors() throws IOException
         {
-            if(neighbors.size() < 1) 
-                return false;
+            // if(neighbors.size() < 1) 
+            //     return false;
 
             // if this peer has the file already, randomly choose among interested neighbors
             if(file.hasFile())
