@@ -50,13 +50,13 @@ class Message implements TCPMessage
 
     private byte[] readPayload(byte[] message)
     {
-        if(type < 4)
+        if(type < 4 || type > 7) 
         {
             byte[] emptyPayload = {};
             return emptyPayload;
         }
 
-        return Arrays.copyOfRange(message, 5, 5+length);
+        return Arrays.copyOfRange(message, 5, 5+length-1);
         
     }
 

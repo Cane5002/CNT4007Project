@@ -112,6 +112,11 @@ public class TorrentFile {
         fileComplete = true;
     }
 
+    public void changeFileName(String name_) {
+        file = new File(name_);
+        fileComplete = false;
+    }
+
     // Consolidate pieces and generate complete file / return success
     public boolean generateFile() {
         if (!hasFile()) return false;

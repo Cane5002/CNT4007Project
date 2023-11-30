@@ -373,7 +373,6 @@ public class peerProcess {
             for (int i = 0; i < pieceBytes.length; i++) {
                 pieceBytes[i] = piece[i+4];
             }
-
             
             if (file.setPiece(index, pieceBytes)) {
                 //update how many chunks they've sent
@@ -469,7 +468,9 @@ public class peerProcess {
                 {
                     Thread.sleep(config.unchokingInterval*1000);
                     searchForNeighbors();
+
                 }
+
 
             }
             catch(InterruptedException e)
@@ -489,6 +490,7 @@ public class peerProcess {
         {
             // if(neighbors.size() < 1) 
             //     return false;
+
 
             // if this peer has the file already, randomly choose among interested neighbors
             if(file.hasFile())
@@ -556,13 +558,13 @@ public class peerProcess {
             else
             {
                 //find numPreferredNeighbors # of interested neighbors
-                int neighborsFound = 0;
 
                 //set preferred neighbors
                 ArrayList<Integer> preferredNeighbors = findAllMaxNeighbors();
                 List<Integer> preferredIDs = new ArrayList<Integer>();
                 for(int i = 0; i < preferredNeighbors.size(); i++)
                 {
+
                     int peerID = preferredNeighbors.get(i);
                     if(!neighbors.get(peerID).interested)
                         continue;
@@ -602,6 +604,7 @@ public class peerProcess {
                     }
                 }
                 if (neighborsChanged) log.logPreferredNeighbors(preferredIDs);
+
             }
 
             return true;
@@ -618,8 +621,8 @@ public class peerProcess {
             while(maximums.size() < config.numPreferredNeighbors)
             {
                 int maxNeighborIndex = findMaxNeighbor(copyOfInitKeys);
-                if(maxNeighborIndex != -1)
-                    maximums.add(maxNeighborIndex);
+                if(maxNeighborIndex == -1) break;
+                maximums.add(maxNeighborIndex);
             }
 
             return maximums;
@@ -699,6 +702,7 @@ public class peerProcess {
 
         public void optimisticallyUnchoke() throws IOException
         {
+            System.out.println("Running optimisitic protocol...");
             //create a list of all of the choked neighbors
             List<Neighbor> chokedNeighbors = new ArrayList<Neighbor>();
             for (Map.Entry<Integer,Neighbor> n : neighbors.entrySet()) {
