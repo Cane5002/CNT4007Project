@@ -714,7 +714,7 @@ public class peerProcess {
     // ---- Helpers -----
     public static void terminate() {
         for(Map.Entry<Integer, Neighbor> n : neighbors.entrySet()) {
-            n.getValue().sendMessage(new TerminateMessage());
+            n.getValue().conn.interrupt();
         }
         running = false;
         try { 
