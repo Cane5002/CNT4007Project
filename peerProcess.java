@@ -217,7 +217,7 @@ public class peerProcess {
                 try{
                     in.close();
                     out.close();
-                    connection.close();
+                    if (!connection.isClosed()) connection.close();
                     System.out.println("CLOSING CONNECTION WITH " + neighborID);
                     neighbors.remove(neighborID);
                 }
@@ -448,6 +448,13 @@ public class peerProcess {
 
         }
 
+        public void close() {
+            try {
+                connection.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
     }
 
     public static class PreferredProtocol extends Thread {
