@@ -449,11 +449,13 @@ public class peerProcess {
         }
 
         public void close() {
+            System.out.print("Closing connection...");
             try {
                 connection.close();
             } catch (IOException e) {
                 e.printStackTrace();
             }
+            System.out.println(connection.isClosed() ? "Sucess" : "Failed");
         }
     }
 
@@ -721,7 +723,7 @@ public class peerProcess {
     // ---- Helpers -----
     public static void terminate() {
         for(Map.Entry<Integer, Neighbor> n : neighbors.entrySet()) {
-            n.getValue().conn.interrupt();
+            n.getValue().conn.close();
         }
         running = false;
         try { 
