@@ -69,9 +69,13 @@ public class peerProcess {
         // Listen for future peer connections
         try {
             server = new ServerSocket(config.getPeer(peerID).portNumber);
-            while(running) {
-                new Connection(server.accept()).start();
-            }
+            try {
+                while(running) {
+                    new Connection(server.accept()).start();
+                }
+            } catch (IOException e) {
+                System.out.println("SERVER CLOSED");
+            };
         }
         catch(IOException ioException){
             ioException.printStackTrace();
@@ -508,17 +512,18 @@ public class peerProcess {
                     preferredNeighbors.add(interestedNeighbors.get(0));
                     interestedNeighbors.remove(0);
                 }
-                log.logPreferredNeighbors(preferredIDs);
-              
+                
                 //unchoke all the preferred neighbors
+                boolean neighborsChanged = false;
                 for(int i = 0; i < preferredNeighbors.size(); i++)
                 {
                     Neighbor curNeighbor = preferredNeighbors.get(i);
                     if(curNeighbor.connection == null)
-                        continue;
-
+                    continue;
+                    
                     if(curNeighbor.preferred && curNeighbor.choked) 
                     {
+                        neighborsChanged = true;
                         curNeighbor.sendMessage(new UnchokeMessage());
                         System.out.println("Unchoke Peer " + curNeighbor.peerID);
                         log.logUnchoked(curNeighbor.peerID);
@@ -527,6 +532,7 @@ public class peerProcess {
                     }
                     else if(!curNeighbor.preferred && !curNeighbor.choked) 
                     {
+                        neighborsChanged = true;
                         curNeighbor.sendMessage(new ChokeMessage());
                         System.out.println("Choke Peer " + curNeighbor.peerID);
                         log.logChoked(curNeighbor.peerID);
@@ -534,8 +540,9 @@ public class peerProcess {
                         curNeighbor.setRate(System.currentTimeMillis());
                     }
                 }
+                if (neighborsChanged) log.logPreferredNeighbors(preferredIDs);
             }
-
+            
             // otherwise, if peer does not have the file follow the algorithm
             else
             {
@@ -556,6 +563,7 @@ public class peerProcess {
                 log.logPreferredNeighbors(preferredIDs);
 
                 //unchoke all the preferred neighbors
+                boolean neighborsChanged = false;
                 for(Map.Entry<Integer, Neighbor> n : neighbors.entrySet())
                 {
 
@@ -565,6 +573,7 @@ public class peerProcess {
                     //unchoke the neighbor
                     if(n.getValue().preferred && n.getValue().choked) 
                     {
+                        neighborsChanged = true;
                         n.getValue().sendMessage(new UnchokeMessage());
                         System.out.println("Unchoke Peer " + n.getKey());
                         log.logUnchoked(n.getKey());
@@ -575,6 +584,7 @@ public class peerProcess {
                     //choke the neighbor
                     else if(!n.getValue().preferred && !n.getValue().choked) 
                     {
+                        neighborsChanged = true;
                         n.getValue().sendMessage(new ChokeMessage());
                         System.out.println("Choke Peer " + n.getKey());
                         log.logChoked(n.getKey());
@@ -582,7 +592,7 @@ public class peerProcess {
                         n.getValue().setRate(System.currentTimeMillis());
                     }
                 }
-
+                if (neighborsChanged) log.logPreferredNeighbors(preferredIDs);
             }
 
             return true;
