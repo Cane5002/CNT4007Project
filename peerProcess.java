@@ -27,6 +27,7 @@ public class peerProcess {
     static Logger log;
     static boolean running = true;
 
+    static ServerSocket server;
     public static void main (String[] args) {
         // ------------- SETUP ---------------
         // Set Peer ID
@@ -66,13 +67,21 @@ public class peerProcess {
 
         // ------------- SERVER ------------
         // Listen for future peer connections
-        try(ServerSocket server = new ServerSocket(config.getPeer(peerID).portNumber)) {
+        try {
+            server = new ServerSocket(config.getPeer(peerID).portNumber);
             while(running) {
                 new Connection(server.accept()).start();
             }
         }
         catch(IOException ioException){
             ioException.printStackTrace();
+        }
+        finally {
+            try {
+                if(!server.isClosed()) server.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
 
         System.out.println("MAIN COMPLETED....EXITING");
@@ -487,6 +496,7 @@ public class peerProcess {
                         n.getValue().sendMessage(new TerminateMessage());
                     }
                     running = false;
+                    try { server.close(); } catch (IOException e) {e.printStackTrace();};
                     return false;
                 }
                 
