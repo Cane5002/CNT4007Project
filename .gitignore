@@ -1,6 +1,7 @@
 *.class
 *.zip
 *.log
+*.jpg
 Client.java
 Server.java
 StartRemotePeers.java
