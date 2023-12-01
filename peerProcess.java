@@ -573,17 +573,20 @@ public class peerProcess {
                     return false;
                 }
                 
-                preferredNeighbors = np.getRandoms(config.numPreferredNeighbors);
+                preferredNeighbors = np.getRandomPreffered(config.numPreferredNeighbors);
             }
             else
             {
                 System.out.println("STANDARD PROTOCOL (" + file.currentPieceCnt + "/" + file.pieceCnt +")");
-                preferredNeighbors = np.getMaxs(config.numPreferredNeighbors);
+                preferredNeighbors = np.getMaxPreffered(config.numPreferredNeighbors);
             }
 
             boolean neighborsChanged = false;
-            for (Neighbor n : preferredNeighbors)
+            System.out.println("Neighbors: ");//deleteme
+            for (Map.Entry<Integer, Neighbor> e : neighbors.entrySet())
             {                    
+                Neighbor n = e.getValue();
+                System.out.println(n); //deleteme
                 if(n.preferred && n.choked) 
                 {
                     neighborsChanged = true;

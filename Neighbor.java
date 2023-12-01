@@ -89,6 +89,10 @@ public class Neighbor
 
     public String toString()
     {
-        return "NEIGHBOR: [PeerID: " + peerID + " | Interested: " + interested + " | Started: " + (startTime/1000) + "]";
+        return "NEIGHBOR: [" + peerID + ", " 
+            + (interested ? "Interested, " : "") 
+            + (preferred ? "Preffered, " : "") 
+            + (choked ? "Choked, " : "Unchoked, ") 
+            + "Started at " + (startTime/1000) + "]";
     }
 }

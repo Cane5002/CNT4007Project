@@ -63,11 +63,12 @@ public class NeighborPicker {
         return maxNeighbor;
     }
 
-    public List<Neighbor> getMaxs(int count) {
+    public List<Neighbor> getMaxPreffered(int count) {
         List<Neighbor> maxs = new ArrayList<Neighbor>();
         while (maxs.size() < count) {
             Neighbor n = getMax();
             if (n==null) break;
+            n.preferred = true;
             maxs.add(n);
         }
         return maxs;
@@ -81,11 +82,12 @@ public class NeighborPicker {
         return r;
     }
 
-    public List<Neighbor> getRandoms(int count) {
+    public List<Neighbor> getRandomPreffered(int count) {
         List<Neighbor> randos = new ArrayList<Neighbor>();
         while (randos.size() < count) {
             Neighbor n = getRandom();
             if (n==null) break;
+            n.preferred = true;
             randos.add(n);
         }
         return randos;
