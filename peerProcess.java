@@ -563,8 +563,10 @@ public class peerProcess {
             }
 
             boolean neighborsChanged = false;
+            System.out.print("Preferred Neighbors: ");//deleteme
             for (Neighbor n : preferredNeighbors)
             {                    
+                System.out.print(n.peerID + ", ");//deleteme
                 if(n.preferred && n.choked) 
                 {
                     neighborsChanged = true;
