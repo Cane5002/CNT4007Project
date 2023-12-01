@@ -4,6 +4,7 @@ import java.io.ObjectOutputStream;
 import java.net.ConnectException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.util.Map;
@@ -199,8 +200,11 @@ public class peerProcess {
                 catch ( ClassNotFoundException e ) {
                     System.err.println("Class not found");
                 }
-                catch(IOException e){
+                catch(SocketException e){
                     System.out.println("READ FAILED - PEER " +  neighborID + " SOCKET CLOSED");
+                }
+                catch(IOException e) {
+                    e.printStackTrace();
                 }
             }
             catch ( ClassNotFoundException e ) {
@@ -227,7 +231,6 @@ public class peerProcess {
             }
         }
 
-        boolean writeErr = false; // deleteme
         void sendMessage(TCPMessage msg) {
             //stream write the message
             try
@@ -236,11 +239,10 @@ public class peerProcess {
                 out.writeObject(msg.toBytes());
                 out.flush();
             }
-            catch(IOException e)
+            catch(SocketException e)
             {
                 // e.printStackTrace();
-                if (!writeErr) System.out.println("Failed to write to Peer " + neighborID + ": Socket Closed"); // deleteme
-                writeErr = true; // deleteme
+                System.out.println("Failed to write to Peer " + neighborID + ": Socket Closed"); // deleteme
                 try{
                     in.close();
                     out.close();
@@ -251,6 +253,9 @@ public class peerProcess {
                 catch(IOException ioException){
                     ioException.printStackTrace();
                 }
+            }
+            catch(IOException e) {
+                e.printStackTrace();
             }
         }
 
