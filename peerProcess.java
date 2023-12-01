@@ -244,8 +244,6 @@ public class peerProcess {
                 // e.printStackTrace();
                 System.out.println("Failed to write to Peer " + neighborID + ": Socket Closed"); // deleteme
                 try{
-                    in.close();
-                    out.close();
                     if (!connection.isClosed()) connection.close();
                     System.out.println("CLOSING CONNECTION WITH " + neighborID);
                     neighbors.remove(neighborID);
