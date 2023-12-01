@@ -227,6 +227,7 @@ public class peerProcess {
             }
         }
 
+        boolean writeErr = false; // deleteme
         void sendMessage(TCPMessage msg) {
             //stream write the message
             try
@@ -237,7 +238,9 @@ public class peerProcess {
             }
             catch(IOException e)
             {
-                e.printStackTrace();
+                // e.printStackTrace();
+                if (!writeErr) System.out.println("Failed to write to Peer " + neighborID + ": Socket Closed"); // deleteme
+                writeErr = true; // deleteme
             }
         }
 
@@ -491,10 +494,11 @@ public class peerProcess {
             // if(neighbors.size() < 1) 
             //     return false;
 
-
+            System.out.print("Running preferred protocol... ");
             // if this peer has the file already, randomly choose among interested neighbors
             if(file.hasFile())
             {
+                System.out.println("COMPLETED PROTOCOL");
                 ArrayList<Neighbor> interestedNeighbors = new ArrayList<Neighbor>();
                 boolean allNeighborsHaveFile = true;
                 for(Map.Entry<Integer, Neighbor> n : neighbors.entrySet()) {
@@ -557,6 +561,7 @@ public class peerProcess {
             // otherwise, if peer does not have the file follow the algorithm
             else
             {
+                System.out.println("STANDARD PROTOCOL");
                 //find numPreferredNeighbors # of interested neighbors
 
                 //set preferred neighbors
