@@ -241,6 +241,16 @@ public class peerProcess {
                 // e.printStackTrace();
                 if (!writeErr) System.out.println("Failed to write to Peer " + neighborID + ": Socket Closed"); // deleteme
                 writeErr = true; // deleteme
+                try{
+                    in.close();
+                    out.close();
+                    if (!connection.isClosed()) connection.close();
+                    System.out.println("CLOSING CONNECTION WITH " + neighborID);
+                    neighbors.remove(neighborID);
+                }
+                catch(IOException ioException){
+                    ioException.printStackTrace();
+                }
             }
         }
 
@@ -576,7 +586,6 @@ public class peerProcess {
                     neighbors.get(peerID).preferred = true;
                     preferredIDs.add(peerID);
                 }
-                log.logPreferredNeighbors(preferredIDs);
 
                 //unchoke all the preferred neighbors
                 boolean neighborsChanged = false;
