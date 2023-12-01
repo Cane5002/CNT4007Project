@@ -1,6 +1,9 @@
+import java.io.EOFException;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.io.OptionalDataException;
+import java.io.StreamCorruptedException;
 import java.net.ConnectException;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -12,6 +15,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.PriorityQueue;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.Random;
 import java.util.Collections;
@@ -20,8 +24,8 @@ public class peerProcess {
     static int peerID;
     static P2P config;
     static TorrentFile file;
-    static Map<Integer, Neighbor> currentlyRequesting = new HashMap<Integer, Neighbor>(); // <PieceIndex, FromNeighbor>
-    static Map<Integer, Neighbor> neighbors = new HashMap<Integer, Neighbor>();
+    static Map<Integer, Neighbor> currentlyRequesting = new ConcurrentHashMap<Integer, Neighbor>(); // <PieceIndex, FromNeighbor>
+    static Map<Integer, Neighbor> neighbors = new ConcurrentHashMap<Integer, Neighbor>();
     
     static ArrayList<Connection> connections = new ArrayList<Connection>();
 
@@ -163,7 +167,9 @@ public class peerProcess {
                 // Listen for messages
                 try {
                     while(running) {
-                        Message message =  new Message(readMessage());
+                        byte[] b = readMessage();
+                        if(b.length == 0) continue;
+                        Message message =  new Message(b);
                         switch(message.getType()) {
                             case ChokeMessage.TYPE:
                                 receiveChoke();
@@ -259,7 +265,23 @@ public class peerProcess {
 
         byte[] readMessage() throws IOException, ClassNotFoundException {
             if (!running) throw new IOException();
-            return (byte[])in.readObject();
+            byte[] result = {};
+            try{
+                result = (byte[])in.readObject();
+            }
+            catch(StreamCorruptedException e)
+            {
+                result = new byte[0];
+            }
+            catch(OptionalDataException e)
+            {
+                return result;
+            }
+            catch(EOFException e)
+            {
+                result = new byte[0];
+            }
+            return result;
         }
 
         // ---------------- MESSAGE HANDLERS ----------------
@@ -574,7 +596,7 @@ public class peerProcess {
             // otherwise, if peer does not have the file follow the algorithm
             else
             {
-                System.out.println("STANDARD PROTOCOL");
+                System.out.println("STANDARD PROTOCOL (" + file.currentPieceCnt + "/" + file.pieceCnt + ")");
                 //find numPreferredNeighbors # of interested neighbors
 
                 //set preferred neighbors

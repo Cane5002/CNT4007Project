@@ -106,7 +106,11 @@ public class Neighbor
 
     public void setRate(long endTime)
     {
-        this.rate = chunksSent/(endTime/1000-startTime/1000);
+        float time = (endTime/1000 - startTime/1000);
+        if(time == 0)
+            this.rate = 0;
+        else
+            this.rate = chunksSent/time;
         chunksSent = 0;
     }
 
