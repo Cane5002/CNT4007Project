@@ -533,7 +533,7 @@ public class peerProcess {
                 for(int i = 0; i < preferredNeighbors.size(); i++)
                 {
                     Neighbor curNeighbor = preferredNeighbors.get(i);
-                    if(curNeighbor.connection == null)
+                    if(curNeighbor.conn == null)
                     continue;
                     
                     if(curNeighbor.preferred && curNeighbor.choked) 
@@ -583,7 +583,7 @@ public class peerProcess {
                 for(Map.Entry<Integer, Neighbor> n : neighbors.entrySet())
                 {
 
-                    if(n.getValue().connection == null)
+                    if(n.getValue().conn == null)
                         continue;
 
                     //unchoke the neighbor
