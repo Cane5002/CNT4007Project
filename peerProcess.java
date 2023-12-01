@@ -43,11 +43,8 @@ public class peerProcess {
 
         // File setup
         file = new TorrentFile(String.format("./%d/%s",peerID,config.fileName), config.fileSize, config.pieceSize);
-        if (config.getPeer(peerID).hasFile) 
-            file.loadFile();
+        if (config.getPeer(peerID).hasFile) file.loadFile();
         
-
-
         // Logger setup
         log = new Logger(peerID);
 
