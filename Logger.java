@@ -43,11 +43,11 @@ public class Logger {
         log(msg.toString());
     }
 
-    public void logPreferredNeighbors(List<Integer> peerIDs) {
+    public void logPreferredNeighbors(List<Neighbor> neighbors) {
         StringBuilder msg = new StringBuilder(String.format("Peer %d has the preferred neighbors ", peerID));
         String delim = "";
-        for (int id : peerIDs) {
-            msg.append(delim).append(id);
+        for (Neighbor n : neighbors) {
+            msg.append(delim).append(n.peerID);
             delim = ", ";
         }
         log(msg.toString());
