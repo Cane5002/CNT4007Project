@@ -418,6 +418,7 @@ public class peerProcess {
             System.out.println("TERMINATE MESSAGE RECEIVED FROM " + neighborID);
             terminate();
         }
+        
         // ---- HELPERS -----
         public boolean determineAndSendRequest()
         {
@@ -456,10 +457,9 @@ public class peerProcess {
             //no longer need any pieces
             else
             {
-                if(currentlyRequesting.size() > 0)
+                if(currentlyRequesting.size() > 0) {
                     currentlyRequesting.clear();
-                interested = false;
-                sendMessage(new NotInterestedMessage());
+                }
                 return false;
             }
 
@@ -477,7 +477,7 @@ public class peerProcess {
             }
             // if not -> interested
             else   {
-                if (interested == null | !interested) {
+                if (interested == null || !interested) {
                     interested = true;
                     n.sendMessage(new InterestedMessage());
                 }
