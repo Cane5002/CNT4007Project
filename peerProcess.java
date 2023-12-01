@@ -73,7 +73,9 @@ public class peerProcess {
             server = new ServerSocket(config.getPeer(peerID).portNumber);
             try {
                 while(running) {
-                    new Connection(server.accept()).start();
+                    Connection c = new Connection(server.accept());
+                    c.start();
+                    connections.add(c);
                 }
             } catch (IOException e) {
                 System.out.println("SERVER CLOSED");
@@ -194,6 +196,9 @@ public class peerProcess {
                                 break;
                             case TerminateMessage.TYPE:
                                 receiveTerminate();
+                                break;
+                            case CompleteMessage.TYPE:
+                                receiveComplete();
                                 break;
                             default:
                                 System.out.println("Type unrecognized");
@@ -394,9 +399,11 @@ public class peerProcess {
                 // System.out.println("Piece of index " + index + " from " + neighborID);
                 log.logDownload(neighborID, index, file.getPieceCount());
 
+                broadcastMessage(new HaveMessage(index));
+                /* 
                 for (Map.Entry<Integer,Neighbor> n : neighbors.entrySet()) {
                     n.getValue().sendMessage(new HaveMessage(index));
-                }
+                }*/
             }
 
             if(currentlyRequesting.containsKey(index))
@@ -409,8 +416,14 @@ public class peerProcess {
             }
 
             //3. send request for a new piece
-            if (!file.generateFile()) determineAndSendRequest();
-            else log.logComplete();
+            if (!file.generateFile())
+            {
+                determineAndSendRequest();
+            }
+            else{
+                broadcastMessage(new CompleteMessage());
+                log.logComplete();
+            }
         }
 
             // ---------- TERMINATE -----------
@@ -418,7 +431,15 @@ public class peerProcess {
             System.out.println("TERMINATE MESSAGE RECEIVED FROM " + neighborID);
             terminate();
         }
-        
+
+        // --------------- COMPLETE -----------
+        public void receiveComplete() {
+            System.out.println("COMPLETE MESSAGE RECEIVED FROM " + neighborID);
+
+            neighbors.get(neighborID).interested = false;
+            neighbors.get(neighborID).bitfield.setAllPieces();
+
+        }
         // ---- HELPERS -----
         public boolean determineAndSendRequest()
         {
@@ -492,6 +513,21 @@ public class peerProcess {
                 e.printStackTrace();
             }
             System.out.println(connection.isClosed() ? "Sucess" : "Failed");
+        }
+    }
+
+    public static void broadcastMessage(TCPMessage msg)
+    {
+        for(Map.Entry<Integer, Neighbor> n : neighbors.entrySet())
+        {
+            try{
+                n.getValue().conn.out.writeObject(msg.toBytes());
+                n.getValue().conn.out.flush();
+            }
+            catch(IOException e)
+            {
+                System.out.println("broadcast to " + n.getValue().peerID + " failed.");
+            }
         }
     }
 
@@ -651,6 +687,7 @@ public class peerProcess {
     // ---- Helpers -----
     public static void terminate() {
         for(Map.Entry<Integer, Neighbor> n : neighbors.entrySet()) {
+            n.getValue().sendMessage(new TerminateMessage());
             n.getValue().conn.close();
         }
         running = false;
