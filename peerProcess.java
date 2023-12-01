@@ -571,6 +571,12 @@ public class peerProcess {
 
                 if(n.preferred && n.choked) 
                 {
+                    if (n.peerID == 1001) {
+                        System.out.println("\n\n\n\n\n\n\n\n\n\n\n----------------------------------------")
+                        System.out.println(n);
+                        System.out.println("UNCHOKING!!!!!!!");
+                        System.out.println("\n\n\n\n\n\n\n\n\n\n\n----------------------------------------")
+                    }
                     n.sendMessage(new UnchokeMessage());
                     System.out.println("Unchoke Peer " + n.peerID);
                     n.choked = false;
@@ -579,6 +585,12 @@ public class peerProcess {
                 }
                 else if(!n.preferred && !n.choked) 
                 {
+                    if (n.peerID == 1001) {
+                        System.out.println("\n\n\n\n\n\n\n\n\n\n\n----------------------------------------")
+                        System.out.println(n);
+                        System.out.println("CHOKING!!!!!!!");
+                        System.out.println("\n\n\n\n\n\n\n\n\n\n\n----------------------------------------")
+                    }
                     n.sendMessage(new ChokeMessage());
                     System.out.println("Choke Peer " + n.peerID);
                     n.choked = true;
