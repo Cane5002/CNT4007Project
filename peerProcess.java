@@ -197,6 +197,9 @@ public class peerProcess {
                             case TerminateMessage.TYPE:
                                 receiveTerminate();
                                 break;
+                            case CompleteMessage.TYPE:
+                                receiveComplete();
+                                break;
                             default:
                                 System.out.println("Type unrecognized");
                         }
@@ -430,14 +433,29 @@ public class peerProcess {
 
 
             //3. send request for a new piece
-            if (!file.generateFile()) determineAndSendRequest();
-            else log.logComplete();
+            if (!file.generateFile())
+            {
+                determineAndSendRequest();
+            }
+            else{
+                broadcastMessage(new CompleteMessage());
+                log.logComplete();
+            }
         }
 
             // ---------- TERMINATE -----------
         public void receiveTerminate() {
             System.out.println("TERMINATE MESSAGE RECEIVED FROM " + neighborID);
             terminate();
+        }
+
+        // --------------- COMPLETE -----------
+        public void receiveComplete() {
+            System.out.println("COMPLETE MESSAGE RECEIVED FROM " + neighborID);
+
+            neighbors.get(neighborID).interested = false;
+            neighbors.get(neighborID).bitfield.setAllPieces();
+
         }
         // ---- HELPERS -----
         public boolean determineAndSendRequest()
@@ -499,15 +517,15 @@ public class peerProcess {
 
     public static void broadcastMessage(TCPMessage msg)
     {
-        for(Connection c : connections)
+        for(Map.Entry<Integer, Neighbor> n : neighbors.entrySet())
         {
             try{
-                c.out.writeObject(msg.toBytes());
-                c.out.flush();
+                n.getValue().conn.out.writeObject(msg.toBytes());
+                n.getValue().conn.out.flush();
             }
             catch(IOException e)
             {
-                //System.out.println(e);
+                System.out.println("broadcast to " + n.getValue().peerID + " failed.");
             }
         }
     }

@@ -153,4 +153,11 @@ class TerminateMessage extends Message {
         super(1, TYPE, new byte[0]);
     }
 }
+class CompleteMessage extends Message {
+    public static final byte TYPE = 9;
+    CompleteMessage()
+    {
+        super(1, TYPE, new byte[0]);
+    }
+}
 
