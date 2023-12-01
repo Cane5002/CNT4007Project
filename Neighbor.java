@@ -1,9 +1,4 @@
-import java.io.ObjectOutputStream;
-import java.io.IOException;
-import java.net.Socket;
-
-//TODO: adjust to fit the Peer class
-public class Neighbor
+public class Neighbor implements Comparable<Neighbor>
 {
     public int peerID;
     public peerProcess.Connection conn;
@@ -87,12 +82,18 @@ public class Neighbor
         return 0;
     }
 
+    @Override
+    public int compareTo(Neighbor n) {
+        if (peerID==n.peerID) return 0;
+        return ((peerID < n.peerID) ? -1 : 1 );
+    }
+
     public String toString()
     {
-        return "NEIGHBOR: [" + peerID + ", " 
-            + (interested ? "Interested, " : "") 
-            + (preferred ? "Preffered, " : "") 
-            + (choked ? "Choked, " : "Unchoked, ") 
-            + "Started at " + (startTime/1000) + "]";
+        return "[" + peerID + " | " 
+            + (interested ? "I, " : "N, ") 
+            + (preferred ? "P, " : "b, ") 
+            + (choked ? "C, " : "U, ") 
+            + "Start " + (startTime/1000) + "]";
     }
 }

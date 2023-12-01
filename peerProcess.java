@@ -103,11 +103,11 @@ public class peerProcess {
         
         boolean client;
         int neighborID;
-        boolean interested;
+        Boolean interested;
 
         public Connection(String host, int port, int neighborID_) {
             client = true;
-            interested = false;
+            interested = null;
             neighborID = neighborID_;
             try {
                 connection = new Socket(host, port);
@@ -126,9 +126,9 @@ public class peerProcess {
 
         public Connection(Socket connection_) {
             client = false;
-            interested = false;
+            interested = null;
             connection = connection_;
-            System.out.println(String.format("Peer %d has connected",neighborID));
+            System.out.println(String.format("New Peer has connected"));
         }
 
         public void run() {
@@ -335,21 +335,7 @@ public class peerProcess {
             neighbors.get(neighborID).updateBitfield(pieceIndex);
             // neighbors.get(neighborID).bitfield.print();
             
-            // check if we have the same piece
-            // if yes -> not interested
-            if(file.bitfield.getInterestedPieces(neighbors.get(neighborID).bitfield).isEmpty()) {
-                if (interested) {
-                    interested = false;
-                    sendMessage(new NotInterestedMessage());
-                }
-            }
-            // if not -> interested
-            else   {
-                if (!interested) {
-                    interested = true;
-                    sendMessage(new InterestedMessage());
-                }
-            }
+            determineInterested(neighborID);
         }
         
             // --------- BITFIELD ------------
@@ -359,15 +345,7 @@ public class peerProcess {
 
             // check if this peer has the pieces the sender has
             // if sender has something this peer does not, we send an interested message
-            if(!file.bitfield.getInterestedPieces(bitfield).isEmpty())  {
-                interested = true;
-                sendMessage(new InterestedMessage());
-            }
-            // send not interested
-            else {
-                interested = false;
-                sendMessage(new NotInterestedMessage());
-            }
+            determineInterested(neighborID);
         }
         
             // ---------- REQUEST ------------
@@ -432,6 +410,11 @@ public class peerProcess {
                 currentlyRequesting.remove(index); //for use in determineAndSetRequest
 
 
+            //2. Determine Interest
+            for (Map.Entry<Integer,Neighbor> n : neighbors.entrySet()) {
+                determineInterested(n.getKey());
+            }
+
             //3. send request for a new piece
             if (!file.generateFile())
             {
@@ -495,13 +478,31 @@ public class peerProcess {
             //no longer need any pieces
             else
             {
-                if(currentlyRequesting.size() > 0)
+                if(currentlyRequesting.size() > 0) {
                     currentlyRequesting.clear();
-                interested = false;
-                sendMessage(new NotInterestedMessage());
+                }
                 return false;
             }
 
+        }
+
+        public void determineInterested(int neighborID) {
+            Neighbor n = neighbors.get(neighborID);
+            // check if we have the same piece
+            // if yes -> not interested
+            if(file.bitfield.getInterestedPieces(n.bitfield).isEmpty()) {
+                if (interested == null || interested) {
+                    interested = false;
+                    n.sendMessage(new NotInterestedMessage());
+                }
+            }
+            // if not -> interested
+            else   {
+                if (interested == null || !interested) {
+                    interested = true;
+                    n.sendMessage(new InterestedMessage());
+                }
+            }
         }
 
         public void close() {
@@ -564,7 +565,6 @@ public class peerProcess {
 
             System.out.print("Running preferred protocol... ");
 
-            List<Neighbor> preferredNeighbors;
             NeighborPicker np = new NeighborPicker();
 
             for(Map.Entry<Integer, Neighbor> n : neighbors.entrySet()) {
@@ -591,23 +591,22 @@ public class peerProcess {
                     return false;
                 }
                 
-                preferredNeighbors = np.getRandomPreffered(config.numPreferredNeighbors);
+                log.logPreferredNeighbors(np.getRandomPreffered(config.numPreferredNeighbors));
             }
             else
             {
                 System.out.println("STANDARD PROTOCOL (" + file.currentPieceCnt + "/" + file.pieceCnt +")");
-                preferredNeighbors = np.getMaxPreffered(config.numPreferredNeighbors);
+                log.logPreferredNeighbors(np.getMaxPreffered(config.numPreferredNeighbors));
             }
 
-            boolean neighborsChanged = false;
             System.out.println("Neighbors: ");//deleteme
             for (Map.Entry<Integer, Neighbor> e : neighbors.entrySet())
             {                    
                 Neighbor n = e.getValue();
                 System.out.println(n); //deleteme
+
                 if(n.preferred && n.choked) 
                 {
-                    neighborsChanged = true;
                     n.sendMessage(new UnchokeMessage());
                     System.out.println("Unchoke Peer " + n.peerID);
                     n.choked = false;
@@ -616,7 +615,6 @@ public class peerProcess {
                 }
                 else if(!n.preferred && !n.choked) 
                 {
-                    neighborsChanged = true;
                     n.sendMessage(new ChokeMessage());
                     System.out.println("Choke Peer " + n.peerID);
                     n.choked = true;
@@ -624,7 +622,6 @@ public class peerProcess {
                     n.setRate(System.currentTimeMillis());
                 }
             }
-            if (neighborsChanged) log.logPreferredNeighbors(preferredNeighbors);
 
             return true;
         }

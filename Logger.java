@@ -1,5 +1,7 @@
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -42,8 +44,22 @@ public class Logger {
         }
         log(msg.toString());
     }
-
+    
+    List<Neighbor> previous = new ArrayList<Neighbor>();
     public void logPreferredNeighbors(List<Neighbor> neighbors) {
+        // Check for changes
+        Collections.sort(neighbors);
+        if (neighbors.size() == previous.size() ) {
+            boolean different = false;
+            for (int i = 0; i < neighbors.size(); i++) {
+                if (neighbors.get(i).compareTo(previous.get(i))!=0) {
+                    different = true;
+                    break;
+                }
+            }
+            if (!different) return;
+        }
+
         StringBuilder msg = new StringBuilder(String.format("Peer %d has the preferred neighbors ", peerID));
         String delim = "";
         for (Neighbor n : neighbors) {
@@ -51,6 +67,7 @@ public class Logger {
             delim = ", ";
         }
         log(msg.toString());
+        previous = neighbors;
     }
 
     public void logOptimisticallyUnchoked(int unchokedPeerID) {
