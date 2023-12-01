@@ -554,23 +554,22 @@ public class peerProcess {
                     return false;
                 }
                 
-                preferredNeighbors = np.getRandomPreffered(config.numPreferredNeighbors);
+                log.logPreferredNeighbors(np.getRandomPreffered(config.numPreferredNeighbors));
             }
             else
             {
                 System.out.println("STANDARD PROTOCOL (" + file.currentPieceCnt + "/" + file.pieceCnt +")");
-                preferredNeighbors = np.getMaxPreffered(config.numPreferredNeighbors);
+                log.logPreferredNeighbors(np.getMaxPreffered(config.numPreferredNeighbors));
             }
-
-            boolean neighborsChanged = false;
+            
             System.out.println("Neighbors: ");//deleteme
             for (Map.Entry<Integer, Neighbor> e : neighbors.entrySet())
             {                    
                 Neighbor n = e.getValue();
                 System.out.println(n); //deleteme
+
                 if(n.preferred && n.choked) 
                 {
-                    neighborsChanged = true;
                     n.sendMessage(new UnchokeMessage());
                     System.out.println("Unchoke Peer " + n.peerID);
                     n.choked = false;
@@ -579,7 +578,6 @@ public class peerProcess {
                 }
                 else if(!n.preferred && !n.choked) 
                 {
-                    neighborsChanged = true;
                     n.sendMessage(new ChokeMessage());
                     System.out.println("Choke Peer " + n.peerID);
                     n.choked = true;
@@ -587,7 +585,6 @@ public class peerProcess {
                     n.setRate(System.currentTimeMillis());
                 }
             }
-            if (neighborsChanged) log.logPreferredNeighbors(preferredNeighbors);
 
             return true;
         }
