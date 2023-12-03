@@ -88,8 +88,7 @@ javac TCPMessage.java
 javac P2P.java
 javac Handshake.java
 javac peerProcess.java
-java peerProcess
-
-  ```
+java peerProcess 
+```
 
 - make sure: Common.cfg, PeerInfo.cfg, testing folders are at the same level as where you run "java peerProcess"
